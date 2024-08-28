@@ -3,9 +3,11 @@
 #include "../galois/galois.h"
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
+
 #include "mceliece_supp.c"
 
-auto randomgoppa(int m, int t, int goppa[]) {
+int* randomgoppa(int m, int t, int goppa[]) {
     while (has_zeroes(goppa, t, m)) {
         for (int i = 0; i <= t; i++) {
             goppa[i] = randombytes_uniform(1 << m);
@@ -16,6 +18,7 @@ auto randomgoppa(int m, int t, int goppa[]) {
 
 void keygen(int m, int t) {
     int goppa[t+1];
+    memset(goppa, 0, sizeof(goppa));
     randomgoppa(m,t, goppa);
     // generate random perm of all field elements
     int* list_field_perm = random_perm(1 << m);
@@ -33,24 +36,62 @@ void keygen(int m, int t) {
         }
     }
     int H[t][1 << m];
-    multiply_matrix(HG,Hhat,t,t,1<<m,H);
+    multiply_matrix(t, t, 1<<m, HG,Hhat,H);
     // row reduce H while interpreted as a matrix of 0s and 1s
     // have H[m*i+r][j] = (H[i][j] << r) % 1
+    row_reduce(t,1<<m, H, m);
+    printf("%d\n", H[0][0]);
+    printf("%d\n", H[0][1]);
+    printf("%d\n", H[1][0]);
+    printf("%d\n", H[1][1]);
+    // want parity to be of the form (I_mt | Q) where Q is mt x (n-mt)
+    // this doesn't necessarily happen immediately
+    // swap columns, swapping the variables in the permutation as well
+    for (int col = 0; col < (1 << m); col++) {
+        for (int row = 0; row < t; row++) {
+            if (H[row][col] == 1) {
+                break;
+            }
+        }
+        for (int next_col = col+1; next_col < t; next_col++) {
+            for (int next_row = 0; next_row < t; next_row++) {
+                if (H[next_row][next_col] == 1) {
+                    swap_col(col, next_col, t, 1<<m, H);
+                    int temp = list_field_perm[col];
+                    list_field_perm[col] = list_field_perm[next_col];
+                    list_field_perm[next_col] = temp;
+                    goto end;
+                }
+            }
+        }
+        end:
+    }
+    row_reduce(t,1<<m, H, m);
+    printf("%d\n", H[0][0]);
+    printf("%d\n", H[0][1]);
+    printf("%d\n", H[1][0]);
+    printf("%d\n", H[1][1]);
 }
 
-int main()
-{
+int main() {
     if (sodium_init() < 0) {
         /* panic! the library couldn't be initialized; it is not safe to use */
     }
-    const int m = 8;
-    const int t = 15;
+
+    int H[2][3] = {0b01, 0b11, 0b10, 0b10, 0b00, 0b11};
+    printf("%d\n", H[0][0]);
+    printf("%d\n", H[0][1]);
+    printf("%d\n", H[1][0]);
+    printf("%d\n", H[1][1]);
+    row_reduce(2,3, H, 2);
+    printf("%d\n", H[0][0]);
+    printf("%d\n", H[0][1]);
+    printf("%d\n", H[1][0]);
+    printf("%d\n", H[1][1]);
+    int m = 8;
+    int t = 15;
     // generate a random message of 2^m-mt bits to be sent
     bool msg[(1 << m) - m*t];
-    for (int i = 0; i < m; i++) {
-        msg[i] = randombytes_uniform(2);
-    }
-    printf("The message is %d\n", msg[1]);
-
+    keygen(8, 15);
     return 0;
 }
