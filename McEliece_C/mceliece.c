@@ -16,34 +16,39 @@ int* randomgoppa(int m, int t, int goppa[]) {
     return goppa;
 }
 
-void keygen(int m, int t) {
+void keygen(const int m, const int t) {
     int goppa[t+1];
     memset(goppa, 0, sizeof(goppa));
     randomgoppa(m,t, goppa);
     // generate random perm of all field elements
     int* list_field_perm = random_perm(1 << m);
     // create parity check matrix H = HG * Hhat
-    int HG[t][t];
-    for (int i = 0; i < t; i++) {
-        for (int j = 0; j <= i; j++) {
-            HG[i][j] = goppa[t-i-j];
-        }
-    }
     int Hhat[t][1 << m];
     for (int i = 0; i < t; i++) {
         for (int j = 0; j <= (1 << m); j++) {
             Hhat[i][j] = galois_single_divide(galois_pow(list_field_perm[j],i,m), galois_eval_poly(list_field_perm[j],t,goppa, m),m);
         }
     }
+    int HG[t][t];
+    memset(HG, 0, sizeof(HG));
+    for (int i = 0; i < t; i++) {
+        for (int j = 0; j <= i; j++) {
+            HG[i][j] = goppa[t-i+j];
+        }
+    }
     int H[t][1 << m];
-    multiply_matrix(t, t, 1<<m, HG,Hhat,H);
+    multiply_matrix(t, t, 1<<m, HG,Hhat,H, m);
     // row reduce H while interpreted as a matrix of 0s and 1s
     // have H[m*i+r][j] = (H[i][j] << r) % 1
+    printf("okay %b\n", H[0][0]);
+    printf("%b\n", H[0][1]);
+    printf("%b\n", H[1][0]);
+    printf("%b\n", H[1][1]);
     row_reduce(t,1<<m, H, m);
-    printf("%d\n", H[0][0]);
-    printf("%d\n", H[0][1]);
-    printf("%d\n", H[1][0]);
-    printf("%d\n", H[1][1]);
+    printf("okay %b\n", H[0][0]);
+    printf("%b\n", H[0][1]);
+    printf("%b\n", H[1][0]);
+    printf("%b\n", H[1][1]);
     // want parity to be of the form (I_mt | Q) where Q is mt x (n-mt)
     // this doesn't necessarily happen immediately
     // swap columns, swapping the variables in the permutation as well
@@ -77,17 +82,17 @@ int main() {
     if (sodium_init() < 0) {
         /* panic! the library couldn't be initialized; it is not safe to use */
     }
-
-    int H[2][3] = {0b01, 0b11, 0b10, 0b10, 0b00, 0b11};
-    printf("%d\n", H[0][0]);
-    printf("%d\n", H[0][1]);
-    printf("%d\n", H[1][0]);
-    printf("%d\n", H[1][1]);
-    row_reduce(2,3, H, 2);
-    printf("%d\n", H[0][0]);
-    printf("%d\n", H[0][1]);
-    printf("%d\n", H[1][0]);
-    printf("%d\n", H[1][1]);
+    //
+    // int H[2][3] = {0b01, 0b11, 0b10, 0b10, 0b00, 0b11};
+    // printf("%d\n", H[0][0]);
+    // printf("%d\n", H[0][1]);
+    // printf("%d\n", H[1][0]);
+    // printf("%d\n", H[1][1]);
+    // row_reduce(2,3, H, 2);
+    // printf("%d\n", H[0][0]);
+    // printf("%d\n", H[0][1]);
+    // printf("%d\n", H[1][0]);
+    // printf("%d\n", H[1][1]);
     int m = 8;
     int t = 15;
     // generate a random message of 2^m-mt bits to be sent

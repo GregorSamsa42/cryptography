@@ -47,13 +47,13 @@ int* random_perm(int n) {
     return perm;
 }
 
-void multiply_matrix(int d1, int d2, int d3, int m1[d1][d2], int m2[d2][d3], int result[d1][d3]) {
+void multiply_matrix(const int d1, const int d2, const int d3, int m1[d1][d2], int m2[d2][d3], int result[d1][d3], const int m) {
     // m1 has dimensions d1 x d2, and m2 has dimensions d2 x d3
     for (int i = 0; i < d1; i++) {
         for (int j = 0; j < d3; j++) {
             result[i][j] = 0;
             for (int k = 0; k < d2; k++) {
-                result[i][j] += m1[i][k] * m2[k][j];
+                result[i][j] ^= galois_single_multiply(m1[i][k], m2[k][j],m);
             }
         }
     }
@@ -73,11 +73,11 @@ void swap_col(int i, int j, int d1, int d2, int H[d1][d2]) {
 void swap_row(int i, int r1, int j, int r2, int d1, int d2, int H[d1][d2]) {
     // note we are swapping row m*i + r1 and row m*j + r2
     for (int k = 0; k < d2; k++) {
-        if ((H[i][k] << r1) & 1 && ~(H[j][k] >> r2) & 1)  {
+        if ((H[i][k] >> r1) & 1 && ~(H[j][k] >> r2) & 1)  {
             H[i][k] &= ~(1 << r1);
             H[j][k] |= 1 << r2;
         }
-        else if (~(H[i][k] << r1) & 1 && (H[j][k] >> r2) & 1) {
+        else if (~(H[i][k] >> r1) & 1 && (H[j][k] >> r2) & 1) {
             H[j][k] &= ~(1 << r2);
             H[i][k] |= 1 << r1;
         }
@@ -86,22 +86,31 @@ void swap_row(int i, int r1, int j, int r2, int d1, int d2, int H[d1][d2]) {
 
 void add_row(int i, int r1, int j, int r2, int d1, int d2, int H[d1][d2]) {
     // note we are adding row m*i + r1 to row m*j + r2
-    for (int col = 0; col < d2; col++) {
-        H[j][col] ^= ((H[i][col] & (1 << r1)) << (r2-r1));
+    if (r2 > r1) {
+        for (int col = 0; col < d2; col++) {
+            H[j][col] ^= ((H[i][col] & (1 << r1)) << (r2-r1));
+        }
+    }
+    else {
+        for (int col = 0; col < d2; col++) {
+            H[j][col] ^= ((H[i][col] & (1 << r1)) >> (r1-r2));
+        }
     }
 }
 
-void row_reduce(int d1, int d2, int H[d1][d2], int m) {
+void row_reduce(const int d1, const int d2, int H[d1][d2], const int m) {
     // this row reduces a matrix without doing any column operations, might have some cols of zeros afterwards
     int count = 0;
     bool increase = false;
-    for (int col = 0; col < d2; col++) {
+    int col = 0;
+    while (count < m*d1) {
         if (increase) {
             count++;
             increase = false;
         }
-        for (int row = 0; row < d1; row++) {
-            for (int r = 0; r < m; r++) {
+        for (int k = count; k < m*d1; k++) {
+            int row = k / m;
+            int r = k % m;
                 if ((H[row][col] >> r & 1) == 1) {
                     increase = true;
                     // move up row with a leading one as high as possible
@@ -114,9 +123,17 @@ void row_reduce(int d1, int d2, int H[d1][d2], int m) {
                             add_row(count / m, count % m, entry, bit, d1, d2, H);
                         }
                     }
+                    // add row in question to all rows above if they have a 1 in the leading col
+                    for (int j = 0; j < count; j++) {
+                        const int entry = j / m;
+                        const int bit = j % m;
+                        if (((H[entry][col] >> bit) & 1) == 1) {
+                            add_row(count / m, count % m, entry, bit, d1, d2, H);
+                        }
+                    }
                 }
-            }
         }
+        col++;
     }
 
 }
