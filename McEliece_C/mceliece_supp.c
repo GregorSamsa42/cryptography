@@ -47,6 +47,22 @@ int* random_perm(int n) {
     return perm;
 }
 
+void generate_error(int n, int w, int error[n]) {
+    // create n-bit error vector with Hamming weight w
+    // first, create one with w 1s at the beginning
+    memset(error, 0, sizeof(int) * n);
+    for (int i = 0; i < w; i++) {
+        error[i] = 1;
+    }
+    // now shuffle error using the Fisher-Yates shuffle
+    for (int i = n-1; i > 0; i--) {
+        int j = randombytes_uniform(i+1);
+        int temp = error[i];
+        error[i] = error[j];
+        error[j] = temp;
+    }
+}
+
 void multiply_matrix(const int d1, const int d2, const int d3, int m1[d1][d2], int m2[d2][d3], int result[d1][d3], const int m) {
     // m1 has dimensions d1 x d2, and m2 has dimensions d2 x d3
     for (int i = 0; i < d1; i++) {
@@ -59,12 +75,36 @@ void multiply_matrix(const int d1, const int d2, const int d3, int m1[d1][d2], i
     }
 }
 
-void swap_col(int i, int j, int d1, int d2, int H[d1][d2]) {
+void swap_col(const int i, const int j, const int d1, const int d2, int H[d1][d2]) {
     for (int row = 0; row < d1; row++) {
         const int temp = H[row][i];
         H[row][i] = H[row][j];
         H[row][j] = temp;
     }
+
+}
+
+int* add_poly(const int d1, const int d2, const int poly1[d1], const int poly2[d2]) {
+    // adds two polys with coefficients in F_2^m (actually for any m, not just the fixed one here)
+    int max;
+    if (d1 > d2) {
+        max = d1;
+    }
+    else {
+        max = d2;
+    }
+    int* result = malloc(sizeof(int) * max);
+    for (int i = 0; i < max; i++) {
+        result[i] = poly1[i]^poly2[i];
+    }
+    return result;
+}
+
+void reduce_mod_poly(const int d1, const int d2, const int poly2[d1+1], const int poly2[d2+1] int result[d2+1]) {
+    // reduces poly1 mod poly2 within F_2^m
+}
+
+void invert_poly(const int degree, const int poly[degree+1], int result[degree+1], const int w) {
 
 }
 
