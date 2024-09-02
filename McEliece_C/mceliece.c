@@ -126,5 +126,19 @@ int main() {
     keygen(m,t,Q,goppa,private_perm);
     int codeword[1 << m];
     encrypt(m,t,msg,Q,codeword);
+    int poly1[3] = {1,2,3};
+    int poly2[3] = {2,3,4};
+    int result[5];
+    mult_poly(2,2,poly1,poly2,result,8);
+    for (int i = 0; i < 5; i++) {
+        printf("%d ",result[i]);
+    }
+    int* quotient = reduce_mod_poly(4,2,result,poly1,8);
+    for (int i = 0; i < 2; i++) {
+        printf("%d ",result[i]);
+    }
+    for (int i = 0; i < 3; i++) {
+        printf("%d ",quotient[i]);
+    }
     return 0;
 }

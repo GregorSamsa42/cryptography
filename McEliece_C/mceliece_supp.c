@@ -84,7 +84,7 @@ void swap_col(const int i, const int j, const int d1, const int d2, int H[d1][d2
 
 }
 
-int* add_poly(const int d1, const int d2, const int poly1[d1], const int poly2[d2]) {
+void add_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], int* result) {
     // adds two polys with coefficients in F_2^m (actually for any m, not just the fixed one here)
     int max;
     if (d1 > d2) {
@@ -93,18 +93,136 @@ int* add_poly(const int d1, const int d2, const int poly1[d1], const int poly2[d
     else {
         max = d2;
     }
-    int* result = malloc(sizeof(int) * max);
-    for (int i = 0; i < max; i++) {
+    // int* result = malloc(sizeof(int) * max);
+    for (int i = 0; i <= max; i++) {
         result[i] = poly1[i]^poly2[i];
     }
-    return result;
 }
 
-void reduce_mod_poly(const int d1, const int d2, const int poly2[d1+1], const int poly2[d2+1] int result[d2+1]) {
-    // reduces poly1 mod poly2 within F_2^m
+void mult_by_var_poly(const int d, const int n, const int poly1[d+1], int* result) {
+    // multiplies p(x) by x^^n
+    // result must have enough space allocated already (but this is guaranteed by mult_poly)
+    memset(result, 0, sizeof(int) * (d+n+1));
+    for (int i = n; i <= d+n; i++) {
+        result[i] = poly1[i-n];
+    }
 }
 
-void invert_poly(const int degree, const int poly[degree+1], int result[degree+1], const int w) {
+void mult_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], int* result, int w) {
+    // result needs d1+d2 * sizeof(int) allocated space
+    memset(result, 0, sizeof(int) * (d1+d2+1));
+    for (int j = 0; j <= d2; j++) {
+        int* temp = malloc(sizeof(int) * (d1+d2+1));
+        mult_by_var_poly(d1, j, poly1, temp);
+        for (int k = 0; k <= d1+d2; k++) {
+            temp[k] = galois_single_multiply(temp[k], poly2[j], w);
+        }
+        add_poly(d1+d2, d1+d2, result, temp, result);
+        free(temp);
+    }
+}
+
+int poly_degree(const int d, const int poly[d+1]) {
+    // outputs the actual degree of a polynomial with d coefficients
+    // if it is zero, output -1
+    for (int i = d; i >= 0; i--) {
+        if (poly[i] != 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int* reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1], const int w) {
+    // reduces poly1 mod poly2 within F_2^w in place and returns quotient
+    // poly2 must be non-zero
+    d2 = poly_degree(d2, poly2);
+    if (d2 == -1) {
+        return NULL;
+    }
+    int* quotient = malloc(sizeof(int) * (d1-d2+1));
+    memset(quotient, 0, sizeof(int) * (d1-d2+1));
+    for (int i = d1; i >= d2; i--) {
+        // create temp poly that is poly2 scaled appropriately, and subtract it from poly1
+        int* temp = malloc(sizeof(int) * (i+1));
+        mult_by_var_poly(d1, i-d2, poly2, temp);
+        // note poly2[d2] is guaranteed to be non-zero here
+        const int factor = galois_single_divide(poly1[i],poly2[d2],w);
+        for (int k = 0; k <= i; k++) {
+            temp[k] = galois_single_multiply(temp[k], factor,w);
+        }
+        // add the appropriate poly to the quotient
+        int temp_quotient[i-d2+1];
+        temp_quotient[i-d2] = factor;
+        add_poly(i-d2, d1-d2, temp_quotient, quotient, quotient);
+        // subtract temp off of poly1
+        add_poly(d1, d1, poly1, temp, poly1);
+        free(temp);
+    }
+    return quotient;
+}
+
+void EEA_standard(int d1, int d2, const int poly1[d1+1], const int poly2[d2+1], int w, int* factor1, int* factor2, int* gcd) {
+    // initialise variables in Euclid's algorithm. Want r - q*g = rem = u*poly1 + v*poly2.
+    int* r = malloc(sizeof(int) * (d1+1));
+    for (int i = 0; i <= d1; i++) {
+        r[i] = poly1[i];
+    }
+    int* g = malloc(sizeof(int) * (d2+1));
+    for (int i = 0; i <= d2; i++) {
+        g[i] = poly2[i];
+    }
+    // note that for the Bezout coefficients we know they have degrees bounded by max(d1,d2)/2
+    int* u = malloc(sizeof(int) * (d1+d2+1));
+    memset(u, 0, sizeof(int) * (d1+d2+1));
+    int* u1 = malloc(sizeof(int) * (d1+d2+1));
+    memset(u1, 0, sizeof(int) * (d1+d2+1));
+    u1[0] = 1;
+    int* v = malloc(sizeof(int) * (d1+d2+1));
+    memset(v, 0, sizeof(int) * (d1+d2+1));
+    v[0] = 1;
+    int* v1 = malloc(sizeof(int) * (d1+d2+1));
+    memset(v1, 0, sizeof(int) * (d1+d2+1));
+    int* u2 = malloc(sizeof(int) * (d1+d2+1));
+    memset(u2, 0, sizeof(int) * (d1+d2+1));
+    int* v2 = malloc(sizeof(int) * (d1+d2+1));
+    memset(v2, 0, sizeof(int) * (d1+d2+1));
+    int remdeg = 1;
+    while (remdeg > -1) {
+        int* q = reduce_mod_poly(d1, d2, r, g, w);
+        int* temp = r;
+        r = g;
+        g = temp;
+        d1 = poly_degree(d1, r);
+        d2 = poly_degree(d2, g);
+        remdeg = d2;
+        u2 = u1;
+        v2 = v1;
+        u1 = u;
+        v1 = v;
+        int* q_times_v = malloc(sizeof(int) * (d1+d2+1));
+        mult_poly(d1, d2, q, v, q_times_v,w);
+        int* q_times_u = malloc(sizeof(int) * (d1+d2+1));
+        mult_poly(d1, d2, q, v, q_times_u,w);
+        add_poly(d1+d2,d1+d2,u2,q_times_u,u);
+        add_poly(d1+d2,d1+d2,v2,q_times_v,v);
+        free(q);
+    }
+    for (int i = 0; i <= d2; i++) {
+        gcd[i] = r[i];
+    }
+    for (int i = 0; i <= d2; i++) {
+        factor1[i] = u2[i];
+    }
+    for (int i = 0; i <= d2; i++) {
+        factor2[i] = v2[i];
+    }
+}
+
+
+void invert_poly(const int d, const int poly[d+1], const int dm, const int modulus[dm+1], int result[dm+1], const int w) {
+    // inverts poly modulo the polynomial modulus, within F_2^w
+    memset(result, 0, sizeof(int) * (dm+1));
 
 }
 
@@ -124,7 +242,7 @@ void swap_row(int i, int r1, int j, int r2, int d1, int d2, int H[d1][d2]) {
     }
 }
 
-void add_row(int i, int r1, int j, int r2, int d1, int d2, int H[d1][d2]) {
+void add_row(const int i, const int r1, const int j, const int r2, int d1, const int d2, int H[d1][d2]) {
     // note we are adding row m*i + r1 to row m*j + r2
     if (r2 > r1) {
         for (int col = 0; col < d2; col++) {
