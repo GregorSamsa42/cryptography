@@ -7,7 +7,7 @@
 
 // TODO: goppa polys of degree t not prime
 
-int* randomgoppa(int m, int t, int goppa[]) {
+int* randomgoppa(const int m, const int t, int goppa[]) {
     // this picks a random polynomial of degree t that has no zeros.
     // Pick t prime, this makes the polynomial guaranteed to be irreducible (Rabin's algorithm for irreducibility).
 
@@ -91,7 +91,7 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
     }
 
 }
-void encrypt(int m, int t, int msg[(1 << m) - m*t], int Q[t][(1 << m)-m*t], int codeword[(1 << m)]) {
+void encrypt(const int m, const int t, int msg[(1 << m) - m*t], int Q[t][(1 << m)-m*t], int codeword[(1 << m)]) {
     // want to use matrix multiplication but this is inefficient...
     // Q*msg would give the top m*t bits of the codeword (the redundancy), interpreted as t field elements of F_2^m
     memset(codeword, 0, sizeof(int) * (1 << m));
@@ -105,8 +105,8 @@ void encrypt(int m, int t, int msg[(1 << m) - m*t], int Q[t][(1 << m)-m*t], int 
             }
         }
     }
-    for (int i = t; i < (1<<m); i++) {
-        codeword[i] = msg[i];
+    for (int i = m*t; i < (1<<m); i++) {
+        codeword[i] = msg[i-m*t];
     }
     // now codeword is the result of Q*msg, and must add error
     int error[1 << m];
@@ -116,7 +116,7 @@ void encrypt(int m, int t, int msg[(1 << m) - m*t], int Q[t][(1 << m)-m*t], int 
     }
 }
 
-void errorlocator(int m, int t, int codeword[1 << m], int goppa[t+1], int private_perm[1 << m], int sigma[t+1]) {
+void errorlocator(const int m, const int t, int codeword[1 << m], int goppa[t+1], int private_perm[1 << m], int sigma[t+1]) {
     // Apply Patterson's algorithm to derive the error locator polynomial over F_2^m
     // first compute the syndrome polynomial s
     int s[t+1];
@@ -172,7 +172,7 @@ void errorlocator(int m, int t, int codeword[1 << m], int goppa[t+1], int privat
     add_poly(t,t,A2,xB2,sigma);
 }
 
-void error_from_errorlocator(int m, int t, int sigma[t], int error[1 << m]) {
+void error_from_errorlocator(const int m, const int t, int sigma[t], int error[1 << m]) {
     // given the error locator poly sigma, convert it into the error by plugging in each value consecutively
     // this is very time intensive!!!
     memset(error, 0, sizeof(int) * (1 << m));
@@ -183,9 +183,14 @@ void error_from_errorlocator(int m, int t, int sigma[t], int error[1 << m]) {
     }
 }
 
-void decrypt(int m, int t, int codeword[1 << m], int goppa[t+1], int private_perm[1 << m]) {
+void decrypt(const int m, const int t, int codeword[1 << m], int goppa[t+1], int private_perm[1 << m], int cleartext[(1 << m) - m*t]) {
     int sigma[t+1];
     errorlocator(m, t, codeword, goppa, private_perm, sigma);
+    int error[1 << m];
+    error_from_errorlocator(m,t,sigma,error);
+    for (int i = 0; i < (1 << m)-m*t; i++) {
+        cleartext[i] = codeword[i+m*t]^error[i+m*t];
+    }
 }
 
 int main() {
@@ -201,16 +206,23 @@ int main() {
     for (int i = 0; i < (1<<m)-m*t; i++) {
         msg[i] = randombytes_uniform(2);
     }
+    printf("  Message:");
+    for (int i = 0; i < (1 << m)-m*t; i++) {
+        printf("%d",msg[i]);
+    }
+    printf("\n Codeword:");
+
     keygen(m,t,Q,goppa,private_perm);
     int codeword[1 << m];
     encrypt(m,t,msg,Q,codeword);
-    int sigma[t+1];
-    errorlocator(m,t,codeword,goppa,private_perm, sigma);
-    for (int i = 0; i < t; i++) {
-        printf("%d ",sigma[i]);
+    for (int i = 0; i < (1 << m); i++) {
+        printf("%d",codeword[i]);
     }
-    int poly1[12] = {1,34,12,44,2,144,11,241,2,4,1,4};
-    int poly2[2] = {2,4};
-
+    int cleartext[(1 << m) - m*t];
+    decrypt(m,t,codeword,goppa,private_perm, cleartext);
+    printf("\nDecrypted:");
+    for (int i = 0; i < (1 << m)-m*t; i++) {
+        printf("%d",cleartext[i]);
+    }
     return 0;
 }
