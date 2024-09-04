@@ -183,6 +183,11 @@ void error_from_errorlocator(int m, int t, int sigma[t], int error[1 << m]) {
     }
 }
 
+void decrypt(int m, int t, int codeword[1 << m], int goppa[t+1], int private_perm[1 << m]) {
+    int sigma[t+1];
+    errorlocator(m, t, codeword, goppa, private_perm, sigma);
+}
+
 int main() {
     if (sodium_init() < 0) {
         /* panic! the library couldn't be initialized; it is not safe to use */
