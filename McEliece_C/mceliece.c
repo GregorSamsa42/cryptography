@@ -30,7 +30,7 @@ int* randomgoppa(int m, int t, int goppa[]) {
     }
     free(quotient);
     for (int i = 0; i < t; i++) {
-        printf("%d ", goppa[i]);
+     //    printf("%d ", goppa[i]);
     }
     return goppa;
 }
@@ -97,9 +97,11 @@ void encrypt(int m, int t, int msg[(1 << m) - m*t], int Q[t][(1 << m)-m*t], int 
     memset(codeword, 0, sizeof(int) * (1 << m));
     // implement quick XOR matrix-vector multiplication
     for (int i = 0; i < t; i++) {
-        for (int j = 0; j < (1 << m)-m*t; j++) {
-            if (msg[j] == 1) {
-                codeword[i] ^= Q[i][j];
+        for (int k = 0; k < m; k++) {
+            for (int j = 0; j < (1 << m)-m*t; j++) {
+                if (msg[j] == 1) {
+                    codeword[i*m+k] ^= (Q[i][j] >> k) & 1;
+                }
             }
         }
     }
@@ -121,14 +123,18 @@ void errorlocator(int m, int t, int codeword[1 << m], int goppa[t+1], int privat
     memset(s, 0, sizeof(int) * (t+1));
     for (int i = 0; i < (1 << m); i++) {
         int linear[t+1];
-        linear[1] = galois_shift_inverse(codeword[i],m);
-        linear[0] = galois_single_divide(private_perm[i],codeword[i],m);
-        for (int j = 2; j <=t; j++) {
-            linear[j] = 0;
+        memset(linear, 0, sizeof(int) * (t+1));
+        if (codeword[i] == 1) {
+            linear[1] = 1;
+            linear[0] = private_perm[i];
+        }
+        else {
+            continue;
         }
         int temp[t+1];
-        invert_poly(t,linear,t,goppa,temp,m);
-        add_poly(t,t,s,temp,s);
+        if (invert_poly(1,linear,t,goppa,temp,m)) {
+            add_poly(t,t,s,temp,s);
+        }
     }
     // if it is zero, then there are no errors.
     if (fully_zero(t, s)) {
@@ -198,15 +204,8 @@ int main() {
     for (int i = 0; i < t; i++) {
         printf("%d ",sigma[i]);
     }
-    int poly1[3] = {1,144,11};
-    int poly2[1] = {1};
-    int result[2];
-    int factor1[2];
-    int factor2[2];
-    EEA_standard(2,0,poly1,poly2,1,factor1,factor2,result);
-    // for (int i = 0; i < 2; i++) {
-    //     printf("\n %d ",result[i]);
-    // }
+    int poly1[12] = {1,34,12,44,2,144,11,241,2,4,1,4};
+    int poly2[2] = {2,4};
 
     return 0;
 }

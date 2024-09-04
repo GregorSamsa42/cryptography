@@ -176,7 +176,6 @@ void reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1
         quotient = NULL;
         return;
     }
-    memset(quotient, 0, sizeof(int) * (d1-d2+1));
     for (int i = d1; i >= d2; i--) {
         // create temp poly that is poly2 scaled appropriately, and subtract it from poly1
         int temp[i+1];
@@ -201,11 +200,13 @@ void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int p
     // initialise variables in Euclid's algorithm. Want r - q*g = rem = u*poly1 + v*poly2.
     int d1_var = d1;
     int d2_var = d2;
-    int* r = malloc(sizeof(int) * (d1+1));
+    int* r = malloc(sizeof(int) * (d1+d2+1));
+    memset(r, 0, sizeof(int) * (d1+d2+1));
     for (int i = 0; i <= d1; i++) {
         r[i] = poly1[i];
     }
-    int* g = malloc(sizeof(int) * (d2+1));
+    int* g = malloc(sizeof(int) * (d1+d2+1));
+    memset(g, 0, sizeof(int) * (d1+d2+1));
     for (int i = 0; i <= d2; i++) {
         g[i] = poly2[i];
     }
@@ -228,10 +229,19 @@ void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int p
     // terminate when the remainder is zero (i.e. degree -1), then can read off Bezout coefficients from u and v
     while (remdeg > -1) {
         int* q = malloc(sizeof(int) * (d1+d2+1));
+        memset(q, 0, sizeof(int) * (d1+d2+1));
         reduce_mod_poly(d1_var, d2_var, r, g, q, w);
-        int* temp = r;
-        r = g;
-        g = temp;
+        int* temp = malloc(sizeof(int) * (d1+d2+1));
+        memset(temp, 0, sizeof(int) * (d1+d2+1));
+        for (int j = 0; j <= d1+d2; j++) {
+            temp[j] = r[j];
+        }
+        for (int j = 0; j <= d1+d2; j++) {
+            r[j] = g[j];
+        }
+        for (int j = 0; j <= d1+d2; j++) {
+            g[j] = temp[j];
+        }
         d1_var = poly_degree(d1_var, r);
         d2_var = poly_degree(d2_var, g);
         remdeg = d2_var;
@@ -257,8 +267,9 @@ void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int p
         free(q_times_v);
         free(q_times_u);
         free(q);
+        free(temp);
     }
-    for (int i = 0; i <= d2; i++) {
+    for (int i = 0; i <= d1_var; i++) {
         gcd[i] = r[i];
     }
     for (int i = 0; i <= d2; i++) {
@@ -361,8 +372,10 @@ bool invert_poly(const int d, const int poly[d+1], const int dm, const int modul
     memset(result, 0, sizeof(int) * (dm+1));
     int factor[dm+1];
     int gcd[dm+1];
+    memset(gcd, 0, sizeof(int) * (dm+1));
+    memset(factor, 0, sizeof(int) * (dm+1));
     EEA_standard(d,dm,poly,modulus,w, result, factor, gcd);
-    const int degree = poly_degree(dm, gcd);
+    const int degree = poly_degree(dm-1, gcd);
     if (degree == 0) {
         for (int i = 0; i <= dm; i++) {
             result[i] = galois_single_divide(result[i], gcd[0], w);
