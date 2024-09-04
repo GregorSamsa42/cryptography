@@ -5,11 +5,32 @@
 
 #include "mceliece_supp.c"
 
+// TODO: goppa polys of degree t not prime
+
 int* randomgoppa(int m, int t, int goppa[]) {
-    while (has_zeroes(goppa, t, m)) {
-        for (int i = 0; i <= t; i++) {
+    // this picks a random polynomial of degree t that has no zeros.
+    // Pick t prime, this makes the polynomial guaranteed to be irreducible (Rabin's algorithm for irreducibility).
+
+    int* quotient = malloc(sizeof(int) * (t+1));
+    int X[t+1];
+    memset(X, 0, sizeof(X));
+    X[1] = 1;
+    // now X is the identity poly
+    int test[t];
+    test[0] = 1; // this makes sure test is not 0 in the first run
+    goppa[t] = 1;
+    // goppa is not necessarily irreducible! But according to Rabin, f of degree t with no zeros is irreducible if and only if it divides X^{2^(mt)}-X
+    while (has_zeroes(goppa, t, m) || !fully_zero(t-1,test)) {
+        for (int i = 0; i < t; i++) {
             goppa[i] = randombytes_uniform(1 << m);
         }
+        // note we compute X^{2^(mt)}-X over and over in every run. This is because it is vastly more efficient to immediately compute it mod goppa.
+        poly_pow_two_mod(t,t,X,goppa,m*t,test, m);
+        add_poly(t,t,X,test, test);
+    }
+    free(quotient);
+    for (int i = 0; i < t; i++) {
+        printf("%d ", goppa[i]);
     }
     return goppa;
 }
@@ -102,16 +123,15 @@ void errorlocator(int m, int t, int codeword[1 << m], int goppa[t+1], int privat
         int linear[t+1];
         linear[1] = galois_shift_inverse(codeword[i],m);
         linear[0] = galois_single_divide(private_perm[i],codeword[i],m);
+        for (int j = 2; j <=t; j++) {
+            linear[j] = 0;
+        }
         int temp[t+1];
         invert_poly(t,linear,t,goppa,temp,m);
         add_poly(t,t,s,temp,s);
     }
     // if it is zero, then there are no errors.
-    int sum = 0;
-    for (int i = 0; i < (1 << m); i++) {
-        sum |= s[i];
-    }
-    if (sum == 0) {
+    if (fully_zero(t, s)) {
         for (int i = 0; i <= t; i++) {
             sigma[i] = 0;
         }
@@ -119,21 +139,31 @@ void errorlocator(int m, int t, int codeword[1 << m], int goppa[t+1], int privat
     }
     int T[t+1];
     invert_poly(t,s,t,goppa,T,m);
-    // if T is x, then the error locator poly is x
+    // if T = s^{-1} is x, then the error locator poly is x
     T[1] ^= 1;
-    sum = 0;
-    for (int i = 0; i < (1 << m); i++) {
-        sum |= T[i];
-    }
-    if (sum == 0) {
+    // T has been set to s^{-1}+x
+    if (fully_zero(t, T)) {
         for (int i = 0; i <= t; i++) {
             sigma[i] = 0;
         }
         sigma[1] = 1;
         return;
     }
-    T[1] ^= 1;
-    // now find square root r of T(z)+z. Q is a field with 2^(mt) elements, so Frobenius is the identity
+    // now find square root r of T(x).
+    int r[t+1];
+    sqrt_poly(t,t,T,goppa,r,m);
+    // the polys in following have smaller degree in theory, but we give them degree t to be sure
+    int A[t+1];
+    int B[t+1];
+    EEA_patterson(t,t,r,goppa,A,B,m);
+    int A2[t+1];
+    mult_poly(t,t,A,A,A2,m);
+    int B2[t+1];
+    mult_poly(t,t,B,B,B2,m);
+    int xB2[t+1];
+    mult_by_var_poly(t,1,B2,xB2);
+    // the error locating poly sigma is A^2+xB^2
+    add_poly(t,t,A2,xB2,sigma);
 }
 
 void error_from_errorlocator(int m, int t, int sigma[t], int error[1 << m]) {
@@ -153,7 +183,7 @@ int main() {
     }
     //
     const int m = 8;
-    const int t = 15;
+    const int t = 11; // segfaults for t > 11, why ??
     int Q[t][(1 << m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
     // generate a random message of 2^m-mt bits to be sent
     int msg[(1 << m) - m*t];
@@ -163,13 +193,20 @@ int main() {
     keygen(m,t,Q,goppa,private_perm);
     int codeword[1 << m];
     encrypt(m,t,msg,Q,codeword);
-    int poly1[1] = {142};
-    int poly2[2] = {2,1};
-    int result[5] = {0};
-    poly_pow_mod(0,1,poly1,poly2,256,result,8);
-    for (int i = 0; i < 1; i++) {
-        printf("result[%d] = %d\n",i,result[i]);
+    int sigma[t+1];
+    errorlocator(m,t,codeword,goppa,private_perm, sigma);
+    for (int i = 0; i < t; i++) {
+        printf("%d ",sigma[i]);
     }
+    int poly1[3] = {1,144,11};
+    int poly2[1] = {1};
+    int result[2];
+    int factor1[2];
+    int factor2[2];
+    EEA_standard(2,0,poly1,poly2,1,factor1,factor2,result);
+    // for (int i = 0; i < 2; i++) {
+    //     printf("\n %d ",result[i]);
+    // }
 
     return 0;
 }

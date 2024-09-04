@@ -3,6 +3,21 @@
 #include "sodium.h"
 #include <stdbool.h>
 
+bool fully_zero(int d, int poly[d+1]) {
+    // tests if a polynomial is zero
+    int sum = 0;
+    for (int i = 0; i < d; i++) {
+        sum |= poly[i];
+    }
+    if (sum == 0) {
+        return true;
+        }
+    else {
+        return false;
+    }
+
+}
+
 int galois_pow(int a, int b, int w) {
     int result = 1;
     while (b > 0) {
@@ -12,10 +27,10 @@ int galois_pow(int a, int b, int w) {
     return result;
 }
 
-int galois_eval_poly(int a, int degree, int poly[], int w) {
+int galois_eval_poly(int a, int d, int poly[d+1], int w) {
     // degree is degree of poly: due to type decay this information is lost after passing
     int result = 0;
-    for (int bit = 0; bit <= degree; bit++) {
+    for (int bit = 0; bit <= d; bit++) {
             int temp = poly[bit];
             temp = galois_single_multiply(temp, galois_pow(a, bit, w), w);
             result = result ^ temp;
@@ -87,6 +102,7 @@ void swap_col(const int i, const int j, const int d1, const int d2, int H[d1][d2
 void add_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], int* result) {
     // adds two polys with coefficients in F_2^m (actually for any m, not just the fixed one here)
     // result should have as many integers allocated as the maximum of d1+1 and d2+1
+    // this is particularly convenient as can let poly1 = result (not so for other methods)
     int max;
     int min;
     bool first_larger;
@@ -129,6 +145,7 @@ void mult_poly(const int d1, const int d2, const int poly1[d1+1], const int poly
     memset(result, 0, sizeof(int) * (d1+d2+1));
     for (int j = 0; j <= d2; j++) {
         int* temp = malloc(sizeof(int) * (d1+d2+1));
+        memset(temp, 0, sizeof(int) * (d1+d2+1));
         mult_by_var_poly(d1, j, poly1, temp);
         for (int k = 0; k <= d1+d2; k++) {
             temp[k] = galois_single_multiply(temp[k], poly2[j], w);
@@ -155,13 +172,14 @@ void reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1
     // poly2 must be non-zero
     // quotient must have d1-d2+1 allocated integers
     d2 = poly_degree(d2, poly2);
-    if (d2 == -1) {
+    if (d2 == -1 || d2 > d1) {
         quotient = NULL;
+        return;
     }
     memset(quotient, 0, sizeof(int) * (d1-d2+1));
     for (int i = d1; i >= d2; i--) {
         // create temp poly that is poly2 scaled appropriately, and subtract it from poly1
-        int* temp = malloc(sizeof(int) * (i+1));
+        int temp[i+1];
         mult_by_var_poly(d1, i-d2, poly2, temp);
         // note poly2[d2] is guaranteed to be non-zero here
         const int factor = galois_single_divide(poly1[i],poly2[d2],w);
@@ -176,12 +194,13 @@ void reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1
         add_poly(i-d2, d1-d2, temp_quotient, quotient, quotient);
         // subtract temp off of poly1
         add_poly(d1, d1, poly1, temp, poly1);
-        free(temp);
     }
 }
 
-void EEA_standard(int d1, int d2, const int poly1[d1+1], const int poly2[d2+1], const int w, int* factor1, int* factor2, int* gcd) {
+void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], const int w, int* factor1, int* factor2, int* gcd) {
     // initialise variables in Euclid's algorithm. Want r - q*g = rem = u*poly1 + v*poly2.
+    int d1_var = d1;
+    int d2_var = d2;
     int* r = malloc(sizeof(int) * (d1+1));
     for (int i = 0; i <= d1; i++) {
         r[i] = poly1[i];
@@ -209,13 +228,13 @@ void EEA_standard(int d1, int d2, const int poly1[d1+1], const int poly2[d2+1], 
     // terminate when the remainder is zero (i.e. degree -1), then can read off Bezout coefficients from u and v
     while (remdeg > -1) {
         int* q = malloc(sizeof(int) * (d1+d2+1));
-        reduce_mod_poly(d1, d2, r, g, q, w);
+        reduce_mod_poly(d1_var, d2_var, r, g, q, w);
         int* temp = r;
         r = g;
         g = temp;
-        d1 = poly_degree(d1, r);
-        d2 = poly_degree(d2, g);
-        remdeg = d2;
+        d1_var = poly_degree(d1_var, r);
+        d2_var = poly_degree(d2_var, g);
+        remdeg = d2_var;
         // copy over arrays, don't just change pointers
         for (int i = 0; i <= d1+d2; i++) {
             u2[i] = u1[i];
@@ -239,8 +258,25 @@ void EEA_standard(int d1, int d2, const int poly1[d1+1], const int poly2[d2+1], 
         free(q_times_u);
         free(q);
     }
+    for (int i = 0; i <= d2; i++) {
+        gcd[i] = r[i];
+    }
+    for (int i = 0; i <= d2; i++) {
+        factor1[i] = u[i];
+    }
+    for (int i = 0; i <= d2; i++) {
+        factor2[i] = v[i];
+    }
+    free(u);
+    free(u1);
+    free(u2);
+    free(v);
+    free(v1);
+    free(v2);
+    free(r);
+    free(g);
 }
-    void EEA_patterson(int d1, int d2, const int poly1[d1+1], const int goppa[d2+1], const int w, int* A, int* B) {
+    void EEA_patterson(int d1, int d2, const int poly1[d1+1], const int goppa[d2+1], int* A, int* B, const int w) {
     // initialise variables in Euclid's algorithm. Want r - q*g = rem = u*poly1 + v*poly2.
     // same as before, except the break condition and the outputs are different
     const int d2_fixed = d2;
@@ -342,7 +378,7 @@ bool invert_poly(const int d, const int poly[d+1], const int dm, const int modul
 void poly_pow_mod(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], const int exponent, int* result, const int w) {
     // only works for positive exponents. computes poly1^exponent mod poly2.
     int q[d1-d2+1];
-    memset(result, 0, sizeof(int)*d2);
+    memset(result, 0, sizeof(int)*(d2+1));
     result[0] = 1;
     // poly1_var is reduced poly1, as don't want to change poly1 which is passed by reference/is a pointer
     int poly1_var[d1+1];
@@ -353,12 +389,39 @@ void poly_pow_mod(const int d1, const int d2, const int poly1[d1+1], const int p
     for (int i = 0; i < exponent; i++) {
         int temp[d1+d2+1];
         mult_poly(d1, d2, poly1_var, result, temp, w);
-        reduce_mod_poly(d1, d2, temp, poly2, q, w);
+        reduce_mod_poly(d1+d2, d2, temp, poly2, q, w);
         for (int j = 0; j < d2; j++) {
             result[j] = temp[j];
         }
     }
 
+}
+
+void poly_pow_two_mod(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], const int exponent, int* result, const int w) {
+    // only works for positive exponents. computes poly1^(2^exponent) mod poly2.
+    int* q = malloc(sizeof(int) * (d1+d2+1));
+    // poly1_var is reduced poly1, as don't want to change poly1 which is passed by reference/is a pointer
+    for (int i = 0; i <= d1; i++) {
+        result[i] = poly1[i];
+    }
+    reduce_mod_poly(d1, d2, result, poly2, q, w);
+    for (int i = 0; i < exponent; i++) {
+        int temp[d1+d2+1];
+        mult_poly(d1, d2, result, result, temp, w);
+        reduce_mod_poly(d1+d2, d2, temp, poly2, q, w);
+        for (int j = 0; j < d2; j++) {
+            result[j] = temp[j];
+        }
+    }
+    free(q);
+
+}
+
+void sqrt_poly(const int d1, const int d2, const int poly1[d1], const int poly2[d2], int* result, const int w) {
+    // this works if poly2 is irreducible over F_2^w.
+    // Have a field with 2^(mt) elements, so Frobenius is the identity
+    int t = poly_degree(d2, poly2);
+    poly_pow_two_mod(d1,t,poly1,poly2,w*t-1, result, w);
 }
 
 // the following are specific algorithms for row/col operations on matrices containing elements in F_2^m interpreted as m-bit vectors
