@@ -24,6 +24,7 @@ int* randomgoppa(const int m, const int t, int goppa[]) {
         for (int i = 0; i < t; i++) {
             goppa[i] = randombytes_uniform(1 << m);
         }
+        memset(test, 0, sizeof(test));
         // note we compute X^{2^(mt)}-X over and over in every run. This is because it is vastly more efficient to immediately compute it mod goppa.
         poly_pow_two_mod(t,t,X,goppa,m*t,test, m);
         add_poly(t,t,X,test, test);
@@ -89,7 +90,6 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
             Q[i][j] = H[i][j+m*t];
         }
     }
-
 }
 void encrypt(const int m, const int t, int msg[(1 << m) - m*t], int Q[t][(1 << m)-m*t], int codeword[(1 << m)]) {
     // want to use matrix multiplication but this is inefficient...
@@ -111,8 +111,10 @@ void encrypt(const int m, const int t, int msg[(1 << m) - m*t], int Q[t][(1 << m
     // now codeword is the result of Q*msg, and must add error
     int error[1 << m];
     generate_error(1<<m, t, error);
+    printf("\n    Error:");
     for (int i = 0; i < (1 << m); i++) {
         codeword[i] ^= error[i];
+        printf("%d", error[i]);
     }
 }
 
@@ -143,8 +145,20 @@ void errorlocator(const int m, const int t, int codeword[1 << m], int goppa[t+1]
         }
         return;
     }
+    printf("\n Goppa poly:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",goppa[i]);
+    }
+    printf("\n Syndrome poly:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",s[i]);
+    }
     int T[t+1];
     invert_poly(t,s,t,goppa,T,m);
+    printf("\n T:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",T[i]);
+    }
     // if T = s^{-1} is x, then the error locator poly is x
     T[1] ^= 1;
     // T has been set to s^{-1}+x
@@ -158,36 +172,73 @@ void errorlocator(const int m, const int t, int codeword[1 << m], int goppa[t+1]
     // now find square root r of T(x).
     int r[t+1];
     sqrt_poly(t,t,T,goppa,r,m);
+    printf("\n r:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",r[i]);
+    }
     // the polys in following have smaller degree in theory, but we give them degree t to be sure
     int A[t+1];
     int B[t+1];
     EEA_patterson(t,t,r,goppa,A,B,m);
+    printf("\n A:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",A[i]);
+    }
+    printf("\n B:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",B[i]);
+    }
     int A2[t+1];
-    mult_poly(t,t,A,A,A2,m);
+    memset(A2, 0, sizeof(int) * (t+1));
+    // it is guaranteed that A has degree at most t/2 and B at most (t-1)/2.
+    mult_poly(t/2,t/2,A,A,A2,m);
+    printf("\n A2:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",A2[i]);
+    }
     int B2[t+1];
-    mult_poly(t,t,B,B,B2,m);
+    memset(B2, 0, sizeof(int) * (t+1));
+    mult_poly((t-1)/2,(t-1)/2,B,B,B2,m);
+    printf("\n B2:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",B2[i]);
+    }
     int xB2[t+1];
-    mult_by_var_poly(t,1,B2,xB2);
+    memset(xB2, 0, sizeof(int) * (t+1));
+    mult_by_var_poly(t-1,1,B2,xB2);
+    printf("\n xB2:");
+
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",xB2[i]);
+    }
     // the error locating poly sigma is A^2+xB^2
     add_poly(t,t,A2,xB2,sigma);
 }
 
-void error_from_errorlocator(const int m, const int t, int sigma[t], int error[1 << m]) {
+void error_from_errorlocator(const int m, const int t, int sigma[t], int error[1 << m], int private_perm[1 << m]) {
     // given the error locator poly sigma, convert it into the error by plugging in each value consecutively
     // this is very time intensive!!!
     memset(error, 0, sizeof(int) * (1 << m));
+    printf("\nLoc.Error:");
     for (int i = 0; i < (1 << m) ; i++) {
-        if (galois_eval_poly(i, t, sigma, m) == 0) {
+        if (galois_eval_poly(private_perm[i], t, sigma, m) == 0) {
             error[i] = 1;
         }
+    }
+    for (int i = 0; i < (1 << m) ; i++) {
+        printf("%d", error[i]);
     }
 }
 
 void decrypt(const int m, const int t, int codeword[1 << m], int goppa[t+1], int private_perm[1 << m], int cleartext[(1 << m) - m*t]) {
     int sigma[t+1];
     errorlocator(m, t, codeword, goppa, private_perm, sigma);
+    printf("\n Error locator poly:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",sigma[i]);
+    }
     int error[1 << m];
-    error_from_errorlocator(m,t,sigma,error);
+    error_from_errorlocator(m,t,sigma,error, private_perm);
     for (int i = 0; i < (1 << m)-m*t; i++) {
         cleartext[i] = codeword[i+m*t]^error[i+m*t];
     }
@@ -198,9 +249,9 @@ int main() {
         /* panic! the library couldn't be initialized; it is not safe to use */
     }
     //
-    const int m = 8;
-    const int t = 11; // segfaults for t > 11, why ??
-    int Q[t][(1 << m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
+    const int m = 4;
+    const int t = 3; // segfaults for t > 11, why ??
+    int Q[t][(1 <<m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
     // generate a random message of 2^m-mt bits to be sent
     int msg[(1 << m) - m*t];
     for (int i = 0; i < (1<<m)-m*t; i++) {
@@ -210,11 +261,12 @@ int main() {
     for (int i = 0; i < (1 << m)-m*t; i++) {
         printf("%d",msg[i]);
     }
-    printf("\n Codeword:");
+
 
     keygen(m,t,Q,goppa,private_perm);
     int codeword[1 << m];
     encrypt(m,t,msg,Q,codeword);
+    printf("\n Codeword:");
     for (int i = 0; i < (1 << m); i++) {
         printf("%d",codeword[i]);
     }
@@ -223,6 +275,33 @@ int main() {
     printf("\nDecrypted:");
     for (int i = 0; i < (1 << m)-m*t; i++) {
         printf("%d",cleartext[i]);
+    }
+    // bool same = true;
+    // for (int i = 0; i < (1 << m)-m*t; i++) {
+    //     if (cleartext[i] != msg[i]) {
+    //         same = false;
+    //         printf("\n%d", i);
+    //     }
+    // }
+    // if (same) {
+    //     printf("SAME");
+    // }
+    int gn[4] = {8,0,14,1};
+    int rn[4] = {8,2,3,0};
+    int An[4] = {1,6,0,0};
+    int Tn[4] = {7, 15, 5, 0};
+    int result[7] = {0,0,0,0,0,0,0};
+    int result1[7] = {0,0,0,0,0,0,0};
+    int result2[7] = {0,0,0,0,0,0,0};
+    mult_poly(3,3,rn,rn,result,4);
+    add_poly(6,6,result,Tn,result);
+    int quotient[4];
+    reduce_mod_poly(6,3,result,gn,quotient,4);
+    int linear[2] = {4,1};
+    invert_poly(1,linear,3,gn,result, 4);
+    printf("\n Result:");
+    for (int i = 0; i < 7; i++) {
+        printf("%d",result[i]);
     }
     return 0;
 }
