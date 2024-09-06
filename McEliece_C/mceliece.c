@@ -239,13 +239,7 @@ int main() {
     for (int i = 0; i < (1 << m)-m*t; i++) {
         printf("%d",msg[i]);
     }
-
-
     keygen(m,t,Q,goppa,private_perm);
-    // printf("\n Private perM:");
-    // for (int i = 0; i < (1 << m); i++) {
-    //     printf(" %d", private_perm[i]);
-    // }
     int codeword[1 << m];
     encrypt(m,t,msg,Q,codeword);
     printf("\n Codeword:");
