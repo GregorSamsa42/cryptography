@@ -30,7 +30,7 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
         add_poly(t,1,test,X, test);
     }
     FILE* fp = fopen("../mceliece_secret.key","wb");
-    fwrite(&goppa, sizeof(int)*(t+1), 1, fp);
+    fwrite(goppa, sizeof(int)*(t+1), 1, fp);
     fclose(fp);
     return goppa;
 }
@@ -42,7 +42,7 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
     // generate random perm of all field elements
     random_perm(1 << m, private_perm);
     FILE* fp = fopen("../mceliece_secret.key","ab");
-    fwrite(&private_perm, (1 << m)*sizeof(int), 1, fp);
+    fwrite(private_perm, (1 << m)*sizeof(int), 1, fp);
     fclose(fp);
     // create parity check matrix H = HG * Hhat
     int Hhat[t][1 << m];
@@ -108,7 +108,7 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
         for (int j = 0; j < (1 << m)-m*t; j++) {
             Q[i][j] = H[i][j+m*t];
         }
-        fwrite(&Q[i], ((1 << m)-m*t)*sizeof(int), 1, fp);
+        fwrite(Q[i], ((1 << m)-m*t)*sizeof(int), 1, fp);
     }
     fclose(fp);
 }
@@ -133,7 +133,8 @@ int main() {
         printf("%d ",private_perm[i]);
     }
     FILE* fp = fopen("../mceliece_secret.key","rb");
-    fread(&test, 1 <<m, sizeof(int), fp);
+    fseek(fp, (t+1)*sizeof(int), SEEK_SET);
+    fread(test, 1 <<m, sizeof(int), fp);
     fclose(fp);
     printf("\n file:");
     for (int i = 0; i <= (1<<m); i++) {
