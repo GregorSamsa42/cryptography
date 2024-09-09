@@ -9,7 +9,8 @@ add_executable(cryptography
     galois/galois.c
     galois/galois.h
     McEliece_C/mceliece.c
-    )
+        McEliece_C/mceliece_supp.h
+)
 
 target_link_libraries(cryptography libsodium.a -lm)
 
