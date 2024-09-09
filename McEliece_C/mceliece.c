@@ -3,7 +3,7 @@
 #include "../galois/galois.h"
 #include <string.h>
 
-#include "mceliece_supp.c"
+#include "mceliece_supp.h"
 
 // TODO: goppa polys of degree t not prime
 
