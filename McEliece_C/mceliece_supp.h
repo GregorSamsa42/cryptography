@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include "sodium.h"
 #include <stdbool.h>
+#include "../galois/galois.h"
+
 #ifndef MCELIECE_SUPP_H
 #define MCELIECE_SUPP_H
 

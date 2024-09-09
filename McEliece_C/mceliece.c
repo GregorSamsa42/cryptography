@@ -11,7 +11,6 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
     // this picks a random polynomial of degree t that has no zeros.
     // Pick t prime, this makes the polynomial guaranteed to be irreducible (Rabin's algorithm for irreducibility).
 
-    int* quotient = malloc(sizeof(int) * (t+1));
     int X[2];
     X[0] = 0;
     X[1] = 1;
@@ -29,7 +28,6 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
         poly_pow_two_mod(1,t,X,goppa,m*t,test, m);
         add_poly(t,1,test,X, test);
     }
-    free(quotient);
     return goppa;
 }
 
