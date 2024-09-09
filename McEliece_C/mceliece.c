@@ -12,8 +12,8 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
     // Pick t prime, this makes the polynomial guaranteed to be irreducible (Rabin's algorithm for irreducibility).
 
     int* quotient = malloc(sizeof(int) * (t+1));
-    int X[t+1];
-    memset(X, 0, sizeof(X));
+    int X[2];
+    X[0] = 0;
     X[1] = 1;
     // now X is the identity poly
     int test[t];
@@ -26,8 +26,8 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
         }
         memset(test, 0, sizeof(test));
         // note we compute X^{2^(mt)}-X over and over in every run. This is because it is vastly more efficient to immediately compute it mod goppa.
-        poly_pow_two_mod(2,t,X,goppa,m*t,test, m);
-        add_poly(t,2,test,X, test);
+        poly_pow_two_mod(1,t,X,goppa,m*t,test, m);
+        add_poly(t,1,test,X, test);
     }
     free(quotient);
     return goppa;
@@ -64,18 +64,18 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
     // swap columns, swapping the variables in the permutation as well
     int failed_col = 0;
     while (!fully_reduced_parity(t,1<<m,H,m,&failed_col)) {
-        // printf("\n---H half reduced---\n");
-        // for (int row=0; row<t; row++)
-        // {
-        //     for(int columns=0; columns<(1 << m); columns++)
-        //     {
-        //         printf("%d     ", H[row][columns]);
-        //     }
-        //     printf("\n");
-        // }
-        // printf("---H half reduced---\n");
+        printf("\n---H half reduced---\n");
+        for (int row=0; row<t; row++)
+        {
+            for(int columns=0; columns<(1 << m); columns++)
+            {
+                printf("%d     ", H[row][columns]);
+            }
+            printf("\n");
+        }
+        printf("---H half reduced---\n");
         for (int col = failed_col+1; col < (1<<m); col++) {
-                if(H[failed_col/m][col] > (1<<((failed_col-1) % m))) {
+                if(H[failed_col/m][col] > (1<<((failed_col) % m))) {
                     swap_col(col, failed_col, t, 1<<m, H);
                     const int temp = private_perm[col];
                     private_perm[col] = private_perm[failed_col];
