@@ -1,7 +1,5 @@
 
-#include <stdlib.h>
-#include "sodium.h"
-#include <stdbool.h>
+#include "mceliece_supp.h"
 
 bool fully_zero(const int d, const int poly[d+1]) {
     // tests if a polynomial is zero
@@ -107,32 +105,9 @@ void add_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2
     // result should have d1+1 integers allocated
     // this is particularly convenient as can let poly1 = result (not so for other methods)
 
-    // int max;
-    // int min;
-    // bool first_larger;
-    // if (d1 > d2) {
-    //     max = d1;
-    //     min = d2;
-    //     first_larger = true;
-    // }
-    // else {
-    //     max = d2;
-    //     min = d1;
-    //     first_larger = false;
-    // }
     for (int i = 0; i <= d2; i++) {
         result[i] = poly1[i]^poly2[i];
     }
-    // if (first_larger) {
-    //     for (int i = min+1; i <= max; i++) {
-    //         result[i] = poly1[i];
-    //     }
-    // }
-    // else {
-    //     for (int i = min+1; i <= max; i++) {
-    //         result[i] = poly2[i];
-    //     }
-    // }
     for (int i = d2+1; i <= d1; i++) {
         result[i] = poly1[i];
     }
@@ -412,28 +387,6 @@ bool invert_poly(const int d, int poly[d+1], const int dm, const int modulus[dm+
     }
 
 }
-
-// void poly_pow_mod(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], const int exponent, int* result, const int w) {
-//     // only works for positive exponents. computes poly1^exponent mod poly2.
-//     int q[d1-d2+1];
-//     memset(result, 0, sizeof(int)*(d2+1));
-//     result[0] = 1;
-//     // poly1_var is reduced poly1, as don't want to change poly1 which is passed by reference/is a pointer
-//     int poly1_var[d1+1];
-//     for (int i = 0; i <= d1; i++) {
-//         poly1_var[i] = poly1[i];
-//     }
-//     reduce_mod_poly(d1, d2, poly1_var, poly2, q, w);
-//     for (int i = 0; i < exponent; i++) {
-//         int temp[d1+d2+1];
-//         mult_poly(d1, d2, poly1_var, result, temp, w);
-//         reduce_mod_poly(d1+d2, d2, temp, poly2, q, w);
-//         for (int j = 0; j < d2; j++) {
-//             result[j] = temp[j];
-//         }
-//     }
-//
-// }
 
 void poly_pow_two_mod(const int d1, const int d2, int poly1[d1+1], const int poly2[d2+1], const int exponent, int* result, const int w) {
     // only works for positive exponents. computes poly1^(2^exponent) mod poly2.

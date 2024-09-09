@@ -222,13 +222,13 @@ void decrypt(const int m, const int t, int codeword[1 << m], int goppa[t+1], int
     }
 }
 
-int main() {
+int main(int argc, char** argv) {
     if (sodium_init() < 0) {
         /* panic! the library couldn't be initialized; it is not safe to use */
     }
     //
-    const int m = 10;
-    const int t = 30;
+    const int m = 8;
+    const int t = 17; // pick prime
     int Q[t][(1 <<m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
     // generate a random message of 2^m-mt bits to be sent
     int msg[(1 << m) - m*t];
