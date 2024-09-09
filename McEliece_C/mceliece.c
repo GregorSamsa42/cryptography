@@ -64,16 +64,16 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
     // swap columns, swapping the variables in the permutation as well
     int failed_col = 0;
     while (!fully_reduced_parity(t,1<<m,H,m,&failed_col)) {
-        printf("\n---H half reduced---\n");
-        for (int row=0; row<t; row++)
-        {
-            for(int columns=0; columns<(1 << m); columns++)
-            {
-                printf("%d     ", H[row][columns]);
-            }
-            printf("\n");
-        }
-        printf("---H half reduced---\n");
+        // printf("\n---H half reduced---\n");
+        // for (int row=0; row<t; row++)
+        // {
+        //     for(int columns=0; columns<(1 << m); columns++)
+        //     {
+        //         printf("%d     ", H[row][columns]);
+        //     }
+        //     printf("\n");
+        // }
+        // printf("---H half reduced---\n");
         for (int col = failed_col+1; col < (1<<m); col++) {
                 if(H[failed_col/m][col] > (1<<((failed_col) % m))) {
                     swap_col(col, failed_col, t, 1<<m, H);
