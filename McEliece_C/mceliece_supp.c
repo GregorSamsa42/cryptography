@@ -1,5 +1,19 @@
 
 #include "mceliece_supp.h"
+#include "sodium.h"
+
+
+void XOR_bits(unsigned char* a, const int b, const int bit_a, const int bit_b) {
+    // XORs the bit_a-th bit of a with the bit_b-th bit of b
+    *a ^= ((b & (1 << bit_b)) << (bit_a - bit_b));
+}
+
+void swap_bytes(unsigned char* a, unsigned char* b, const int bit_a, const int bit_b) {
+    if (((*a >> bit_a) & 1) != ((*b >> bit_b) & 1)) {
+        *a ^= (1 << bit_a);
+        *b ^= (1 << bit_b);
+    }
+}
 
 bool fully_zero(const int d, const int poly[d+1]) {
     // tests if a polynomial is zero
@@ -38,20 +52,20 @@ void random_perm(const int n, int* perm) {
     }
 }
 
-void generate_error(const int n, const int w, int error[n]) {
-    // create n-bit error vector with Hamming weight w
+void generate_error(const int n, const int w, unsigned char error[n]) {
+    // create n-char error vector with Hamming weight w
+    // must have w <= n/8, then error is saved as chars
     // first, create one with w 1s at the beginning
     // error needs n allocated ints
-    memset(error, 0, sizeof(int) * n);
-    for (int i = 0; i < w; i++) {
-        error[i] = 1;
+    memset(error, 0, sizeof(char) * n);
+    for (int i = 0; i < w/8; i++) {
+        error[i] = 255;
     }
+    error[w/8] = (1 << (w%8)) - 1;
     // now shuffle error using the Fisher-Yates shuffle
-    for (int i = n-1; i > 0; i--) {
-        int j = randombytes_uniform(i+1);
-        int temp = error[i];
-        error[i] = error[j];
-        error[j] = temp;
+    for (int i = 8*n-1; i > 0; i--) {
+        const int j = randombytes_uniform(i+1);
+        swap_bytes(&error[i/8], &error[j/8], i % 8, j % 8);
     }
 }
 

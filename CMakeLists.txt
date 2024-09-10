@@ -21,4 +21,5 @@ add_executable(keygen
 
 
 target_link_libraries(keygen libsodium.a -lm)
+target_link_libraries(encrypt libsodium.a -lm)
 

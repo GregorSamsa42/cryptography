@@ -2,7 +2,6 @@
 // Created by linux on 09.09.24.
 //
 #include <stdlib.h>
-#include "sodium.h"
 #include <stdbool.h>
 #include <string.h>
 #include "../galois/galois.h"
@@ -11,6 +10,10 @@
 #define MCELIECE_SUPP_H
 
 int galois_pow(const int a, const int b, const int w);
+
+void swap_bytes(unsigned char* a, unsigned char* b, const int bit_a, const int bit_b);
+
+void XOR_bits(unsigned char* a, const int b, const int bit_a, const int bit_b);
 
 // polynomial manipulation methods
 
@@ -44,7 +47,7 @@ void sqrt_poly(const int d1, const int d2, int poly1[d1+1], const int poly2[d2+1
 
 void random_perm(const int n, int* perm);
 
-void generate_error(const int n, const int w, int error[n]);
+void generate_error(const int n, const int w, unsigned char error[n]);
 
 // matrix methods
 
