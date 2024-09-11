@@ -13,7 +13,7 @@ int galois_pow(const int a, const int b, const int w);
 
 void swap_bytes(unsigned char* a, unsigned char* b, const int bit_a, const int bit_b);
 
-void XOR_bits(unsigned char* a, const int b, const int bit_a, const int bit_b);
+void XOR_bits_in_place(unsigned char* a, const int b, const int bit_a, const int bit_b);
 
 // polynomial manipulation methods
 

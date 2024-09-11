@@ -19,7 +19,15 @@ add_executable(keygen
             McEliece_C/mceliece_supp.h
             McEliece_C/mceliece_supp.c)
 
+add_executable(decrypt
+        galois/galois.c
+        galois/galois.h
+        McEliece_C/decrypt.c
+        McEliece_C/mceliece_supp.h
+        McEliece_C/mceliece_supp.c)
+
 
 target_link_libraries(keygen libsodium.a -lm)
 target_link_libraries(encrypt libsodium.a -lm)
+target_link_libraries(decrypt libsodium.a -lm)
 

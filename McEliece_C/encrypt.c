@@ -14,25 +14,30 @@ void encrypt(const int m, const int t, unsigned char** msg, int Q[t][(1 << m)-m*
 
     // must parse the input buffer: this is done by reading the chars starting from the passed pointer, shifted by 0 <= shift < 8 bits.
 
+    unsigned char* temp = *msg;
     for (int i = 0; i < t; i++) {
         for (int k = 0; k < m; k++) {
-            for (int j = *shift; j < (1 << m)-m*t; j++) {
-                if ((**msg >> (8-(j % 8))) == 1) {
-                    XOR_bits(&codeword[(i*m+k)/8],Q[i][j], (i*m+k) % 8, k);
+            temp = *msg;
+            for (int j = *shift; j < (1 << m)-m*t+*shift; j++) {
+                // maybe 8-j % 8 ??
+                if (((**msg >> ((j % 8))) & 1) == 1) {
+                    XOR_bits_in_place(&codeword[(i*m+k)/8],Q[i][j-*shift], (i*m+k) % 8, k);
                 }
                 if (j % 8 == 7) {
-                    (*msg)++;
+                    temp++;
                 }
             }
         }
     }
-    *shift = ((*shift + ((1 << m) - m*t)) % 8);
     for (int i = m*t; i < (1<<m); i++) {
-        XOR_bits(&codeword[i/8],*msg[(i-m*t)/8], (i) % 8, (i-m*t) % 8);
+        XOR_bits_in_place(&codeword[i/8],*msg[(i-m*t)/8], (i) % 8, (i-m*t+*shift) % 8);
     }
+    *msg = temp;
+    *shift = ((*shift + ((1 << m) - m*t)) % 8);
     // now codeword is the result of Q*msg, and must add error
     unsigned char error[1 << (m-3)];
-    generate_error(1<<(m-3), t, error);
+    memset(error,0,sizeof(error));
+    // generate_error(1<<(m-3), t, error);
     for (int i = 0; i < (1 << (m-3)); i++) {
         codeword[i] ^= error[i];
     }
@@ -50,8 +55,8 @@ int main(int argc, char *argv[]) {
         return 2;
     }
 
-    const int m = 6; // > 3
-    const int t = 7; // prime
+    const int m = 3; // > 3
+    const int t = 2; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
@@ -80,16 +85,16 @@ int main(int argc, char *argv[]) {
     memset(buffer, 0, (file_size+ (1 << m - m*t)/8) * sizeof(char));
     fread(buffer, file_size, 1, fp_cleartext);
     fclose(fp_cleartext);
-    int padding = (8*file_size) % ((1 << m) - m*t);
+    const u_int16_t padding = (8*file_size) % ((1 << m) - m*t);
     // read the public key into a matrix
     int Q[t][(1<<m) - m*t];
     for (int i = 0; i < t; i++) {
-        fseek(fp_pubkey, i*((1<<m)-m*t), SEEK_SET);
+        fseek(fp_pubkey, sizeof(int)*i*((1<<m)-m*t), SEEK_SET);
         fread(Q[i], sizeof(int), (1<<m)-m*t, fp_pubkey);
     }
     fclose(fp_pubkey);
-    // the first integer in fp_encrypted denotes the size of the padding
-    fwrite(&padding, sizeof(int), 1, fp_encrypted);
+    // the first 16bit integer in fp_encrypted denotes the padding, and overwrites file if it exists by reading
+    fwrite(&padding, sizeof(u_int16_t), 1, fp_encrypted);
     fclose(fp_encrypted);
     // now reopen as append to add the encrypted data.
     if (argc == 4) {
@@ -100,10 +105,11 @@ int main(int argc, char *argv[]) {
     }
     int shift = 0;
     // split the file to be encrypted into chunks of (2^m-mt) bits
+    // can compute the amount of required chunks easily from the file size and from m,t
+    unsigned char* ptr = &buffer[0];
     for (int i = 0; i < 8*file_size/((1<<m) - m*t)+1; i++) {
         unsigned char codeword[(1<<(m-3))];
         memset(codeword, 0, sizeof(codeword));
-        unsigned char* ptr = &buffer[0];
         encrypt(m, t, &ptr, Q, codeword, &shift);
         fwrite(codeword, sizeof(char), (1<<(m-3)), fp_encrypted);
     }

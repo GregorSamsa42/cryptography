@@ -103,12 +103,13 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
         row_reduce(t,1<<m, H, m);
     }
     // H is now in systematic form. Return Q as the public key.
-    fp = fopen("../mceliece_public.key","ab");
+    fp = fopen("../mceliece_public.key","wb");
     for (int i = 0; i < t; i++) {
         for (int j = 0; j < (1 << m)-m*t; j++) {
             Q[i][j] = H[i][j+m*t];
         }
         fwrite(Q[i], ((1 << m)-m*t)*sizeof(int), 1, fp);
+        fseek(fp, ((1 << m)-m*t)*sizeof(int), SEEK_SET);
     }
     fclose(fp);
 }
@@ -118,8 +119,8 @@ int main() {
         /* panic! the library couldn't be initialized; it is not safe to use */
     }
     //
-    const int m = 6;
-    const int t = 7; // pick prime
+    const int m = 3;
+    const int t = 2; // pick prime
     int Q[t][(1 <<m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
     int test[1<<m];
     memset(test, 0, sizeof(test));
@@ -129,7 +130,7 @@ int main() {
         printf("%d ",goppa[i]);
     }
     printf("\n Perm:");
-    for (int i = 0; i <= (1<<m); i++) {
+    for (int i = 0; i < (1<<m); i++) {
         printf("%d ",private_perm[i]);
     }
     FILE* fp = fopen("../mceliece_secret.key","rb");
@@ -137,8 +138,14 @@ int main() {
     fread(test, 1 <<m, sizeof(int), fp);
     fclose(fp);
     printf("\n file:");
-    for (int i = 0; i <= (1<<m); i++) {
+    for (int i = 0; i < (1<<m); i++) {
         printf("%d ",test[i]);
     }
-
+    bool same = true;
+    for (int i = 0; i < (1<<m); i++) {
+        if (test[i] != private_perm[i]) {
+            same = false;
+        }
+    }
+    printf("\n same:%d",same);
 }
