@@ -49,7 +49,7 @@ int galois_pow(const int a, const int b, const int w) {
 }
 
 
-void random_perm(const int n, int* perm) {
+void random_perm(const int n, int perm[n]) {
     // perm needs to have allocated n ints of memory
     for (int i = 0; i < n; i++) {
         perm[i] = i;

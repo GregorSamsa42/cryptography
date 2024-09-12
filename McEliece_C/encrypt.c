@@ -20,7 +20,7 @@ void encrypt(const int m, const int t, unsigned char** msg, int Q[t][(1 << m)-m*
             temp = *msg;
             for (int j = *shift; j < (1 << m)-m*t+*shift; j++) {
                 // maybe 8-j % 8 ??
-                if (((**msg >> ((j % 8))) & 1) == 1) {
+                if (((*temp >> ((j % 8))) & 1) == 1) {
                     XOR_bits_in_place(&codeword[(i*m+k)/8],Q[i][j-*shift], (i*m+k) % 8, k);
                 }
                 if (j % 8 == 7) {
@@ -30,17 +30,25 @@ void encrypt(const int m, const int t, unsigned char** msg, int Q[t][(1 << m)-m*
         }
     }
     for (int i = m*t; i < (1<<m); i++) {
-        XOR_bits_in_place(&codeword[i/8],*msg[(i-m*t)/8], (i) % 8, (i-m*t+*shift) % 8);
+        XOR_bits_in_place(&codeword[i/8],(*msg)[(i-m*t+*shift)/8], (i) % 8, (i-m*t+*shift) % 8);
     }
     *msg = temp;
     *shift = ((*shift + ((1 << m) - m*t)) % 8);
     // now codeword is the result of Q*msg, and must add error
     unsigned char error[1 << (m-3)];
     memset(error,0,sizeof(error));
-    // generate_error(1<<(m-3), t, error);
+    generate_error(1<<(m-3), t, error);
     for (int i = 0; i < (1 << (m-3)); i++) {
         codeword[i] ^= error[i];
     }
+    printf("Codeword: \n");
+    for (int i = 0; i < (1 << (m-3)); i++) {
+        printf("%d ", codeword[i]);
+    }
+    printf("Error: \n");
+for (int i = 0; i < (1 << (m-3)); i++) {
+    printf("%d ", error[i]);
+}
 }
 int main(int argc, char *argv[]) {
  // argv[1] is the file to be encrypted, argv[2] is the public key. If argv[3] is supplied, this is the name of the output.
@@ -48,20 +56,14 @@ int main(int argc, char *argv[]) {
         printf("There should be two or three arguments.\n");
         return 1;
     }
-    FILE *fp_pubkey = fopen(argv[2], "rb");
-    if (fp_pubkey == NULL) {
-        printf("Value of errno: %d\n", errno);
-        perror("Error opening public key file:");
-        return 2;
-    }
 
-    const int m = 3; // > 3
-    const int t = 2; // prime
+    const int m = 8; // > 3
+    const int t = 11; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
 
-    FILE *fp_cleartext = fopen(argv[1], "rb");
+    FILE* fp_cleartext = fopen(argv[1], "rb");
     if (fp_cleartext == NULL) {
         printf("Value of errno: %d\n", errno);
         perror("Error opening file to be encrypted:");
@@ -85,8 +87,14 @@ int main(int argc, char *argv[]) {
     memset(buffer, 0, (file_size+ (1 << m - m*t)/8) * sizeof(char));
     fread(buffer, file_size, 1, fp_cleartext);
     fclose(fp_cleartext);
-    const u_int16_t padding = (8*file_size) % ((1 << m) - m*t);
+    const u_int16_t padding = ((1 << m) - m*t) - ((8*file_size) % ((1 << m) - m*t));
     // read the public key into a matrix
+    FILE *fp_pubkey = fopen(argv[2], "rb");
+    if (fp_pubkey == NULL) {
+        printf("Value of errno: %d\n", errno);
+        perror("Error opening public key file:");
+        return 2;
+    }
     int Q[t][(1<<m) - m*t];
     for (int i = 0; i < t; i++) {
         fseek(fp_pubkey, sizeof(int)*i*((1<<m)-m*t), SEEK_SET);

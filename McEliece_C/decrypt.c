@@ -32,10 +32,10 @@ void errorlocator(const int m, const int t, unsigned char codeword[1 << (m-3)], 
         }
         return;
     }
-    printf("\n \n Goppa poly:");
-    for (int i = 0; i <= t; i++) {
-        printf("%d ",goppa[i]);
-    }
+    // printf("\n \n Goppa poly:");
+    // for (int i = 0; i <= t; i++) {
+    //     printf("%d ",goppa[i]);
+    // }
     int T[t+1];
     invert_poly(t,s,t,goppa,T,m);
     // if T = s^{-1} is x, then the error locator poly is x
@@ -81,23 +81,23 @@ void error_from_errorlocator(const int m, const int t, int sigma[t], unsigned ch
             error[i/8] |= (1 << (i % 8));
         }
     }
-    printf("\nLoc.Error:");
-    for (int i = 0; i < (1 << (m-3)) ; i++) {
-        printf("%d ", error[i]);
-    }
+    // printf("\nLoc.Error:");
+    // for (int i = 0; i < (1 << (m-3)) ; i++) {
+    //     printf("%d ", error[i]);
+    // }
 }
 
 void decrypt(const int m, const int t, unsigned char* codeword, int goppa[t+1], int private_perm[1 << m], unsigned char** cleartext, int* shift) {
     int sigma[t+1];
     errorlocator(m, t, codeword, goppa, private_perm, sigma);
-    printf("\n Codeword:");
-    for (int i = 0; i < (1 << (m-3)); i++) {
-        printf("%d ",codeword[i]);
-    }
-    printf("\n Error locator poly:");
-    for (int i = 0; i <= t; i++) {
-        printf("%d ",sigma[i]);
-    }
+    // printf("\n Codeword:");
+    // for (int i = 0; i < (1 << (m-3)); i++) {
+    //     printf("%d ",codeword[i]);
+    // }
+    // printf("\n Error locator poly:");
+    // for (int i = 0; i <= t; i++) {
+    //     printf("%d ",sigma[i]);
+    // }
     unsigned char error[1 << (m-3)];
     error_from_errorlocator(m,t,sigma,error, private_perm);
     // remove error from the codeword and move pointers appropriately
@@ -117,15 +117,10 @@ int main(int argc, char *argv[]) {
         printf("There should be two or three arguments.\n");
         return 1;
     }
-    FILE *fp_secretkey = fopen(argv[2], "rb");
-    if (fp_secretkey == NULL) {
-        printf("Value of errno: %d\n", errno);
-        perror("Error opening secret key file:");
-        return 2;
-    }
 
-    const int m = 3; // > 3
-    const int t = 2; // prime
+
+    const int m = 8; // > 3
+    const int t = 11; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
@@ -158,20 +153,26 @@ int main(int argc, char *argv[]) {
 
     // read the private key and split it into its two components goppa poly and private perm
     int goppa[t+1]; int private_perm[1 << m];
+    FILE *fp_secretkey = fopen(argv[2], "rb");
+    if (fp_secretkey == NULL) {
+        printf("Value of errno: %d\n", errno);
+        perror("Error opening secret key file:");
+        return 2;
+    }
     fread(goppa, sizeof(int), t+1, fp_secretkey);
     fseek(fp_secretkey, (t+1)*sizeof(int), SEEK_SET);
     fread(private_perm, 1 <<m, sizeof(int), fp_secretkey);
     fclose(fp_secretkey);
-    printf("Goppa poly:");
-    for (int i = 0; i <= t; i++) {
-        printf("%d ",goppa[i]);
-    }
-    printf("\n Perm:");
-    for (int i = 0; i < (1<<m); i++) {
-        printf("%d ",private_perm[i]);
-    }
+    // printf("Goppa poly:");
+    // for (int i = 0; i <= t; i++) {
+    //     printf("%d ",goppa[i]);
+    // }
+    // printf("\n Perm:");
+    // for (int i = 0; i < (1<<m); i++) {
+    //     printf("%d ",private_perm[i]);
+    // }
     // initialise cleartext buffer with the maximal possible length it could attain
-    unsigned char cleartext[(((file_size-2)/(1 << (m-3)))*((1<<m)-m*t))/8+1];
+    unsigned char cleartext[(((file_size-2)/(1 << (m-3)))*((1<<m)-m*t))/8];
     unsigned char* ptr_text = &cleartext[0];
     unsigned char* ptr_buf = &buffer[0];
     int shift = 0; // start from the 7-th i.e. last bit of a char
@@ -181,7 +182,8 @@ int main(int argc, char *argv[]) {
         decrypt(m, t, ptr_buf, goppa, private_perm, &ptr_text, &shift);
         ptr_buf = ptr_buf + (1 << (m-3));
     }
-    fwrite(cleartext, sizeof(unsigned char), ((file_size-2)/(1 << (m-3)))*((1<<m)-m*t)/8+1, fp_decrypted);
+    // write to file, making sure to disregard the padding
+    fwrite(cleartext, sizeof(unsigned char), ((file_size-2)/(1 << (m-3)))*((1<<m)-m*t)/8-((padding+7)/8), fp_decrypted);
     free(buffer);
     fclose(fp_decrypted);
 }
