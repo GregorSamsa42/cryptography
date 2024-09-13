@@ -4,11 +4,11 @@
 #include <errno.h>
 #include "mceliece_supp.h"
 
-void errorlocator(const int m, const int t, unsigned char codeword[1 << (m-3)], int goppa[t+1], int private_perm[1 << m], int sigma[t+1]) {
+void errorlocator(const int m, const int t, unsigned char codeword[1 << (m-3)], uint16_t goppa[t+1], uint16_t private_perm[1 << m], uint16_t sigma[t+1]) {
     // Apply Patterson's algorithm to derive the error locator polynomial over F_2^m
     // first compute the syndrome polynomial s
-    int s[t];
-    memset(s, 0, sizeof(int) * (t+1));
+    uint16_t s[t];
+    memset(s, 0, sizeof(uint16_t) * (t+1));
     for (int i = 0; i < (1 << m); i++) {
         int linear[2];
         // i-th bit of codeword is (i%8)-th bit of (i/8)-th char in codeword.
@@ -19,7 +19,7 @@ void errorlocator(const int m, const int t, unsigned char codeword[1 << (m-3)], 
         else {
             continue;
         }
-        int temp[t+1];
+        uint16_t temp[t+1];
         if (invert_poly(1,linear,t,goppa,temp,m)) {
             add_poly(t-1,t-1,s,temp,s);
         }
@@ -36,7 +36,7 @@ void errorlocator(const int m, const int t, unsigned char codeword[1 << (m-3)], 
     // for (int i = 0; i <= t; i++) {
     //     printf("%d ",goppa[i]);
     // }
-    int T[t+1];
+    uint16_t T[t+1];
     invert_poly(t,s,t,goppa,T,m);
     // if T = s^{-1} is x, then the error locator poly is x
     T[1] ^= 1;
@@ -49,28 +49,28 @@ void errorlocator(const int m, const int t, unsigned char codeword[1 << (m-3)], 
         return;
     }
     // now find square root r of T(x).
-    int r[t+1];
+    uint16_t r[t+1];
     sqrt_poly(t,t,T,goppa,r,m);
     // the polys in following have smaller degree in theory, but we give them degree t to be sure
-    int A[t+1];
-    int B[t+1];
+    uint16_t A[t+1];
+    uint16_t B[t+1];
     EEA_patterson(t,t,r,goppa,A,B,m);
-    int A2[t+1];
-    memset(A2, 0, sizeof(int) * (t+1));
+    uint16_t A2[t+1];
+    memset(A2, 0, sizeof(uint16_t) * (t+1));
     // it is guaranteed that A has degree at most t/2 and B at most (t-1)/2.
     mult_poly(t/2,t/2,A,A,A2,m);
-    int B2[t+1];
-    memset(B2, 0, sizeof(int) * (t+1));
+    uint16_t B2[t+1];
+    memset(B2, 0, sizeof(uint16_t) * (t+1));
     mult_poly((t-1)/2,(t-1)/2,B,B,B2,m);
-    int xB2[t+1];
-    memset(xB2, 0, sizeof(int) * (t+1));
+    uint16_t xB2[t+1];
+    memset(xB2, 0, sizeof(uint16_t) * (t+1));
     mult_by_var_poly(t-1,1,B2,xB2);
 
     // the error locating poly sigma is A^2+xB^2
     add_poly(t,t,A2,xB2,sigma);
 }
 
-void error_from_errorlocator(const int m, const int t, int sigma[t], unsigned char error[1 << (m-3)], int private_perm[1 << m]) {
+void error_from_errorlocator(const int m, const int t, uint16_t sigma[t], unsigned char error[1 << (m-3)], uint16_t private_perm[1 << m]) {
     // given the error locator poly sigma, convert it into the error by plugging in each value consecutively
     // this is very time intensive!!!
     memset(error, 0, sizeof(unsigned char) * (1 << (m-3)));
@@ -87,8 +87,8 @@ void error_from_errorlocator(const int m, const int t, int sigma[t], unsigned ch
     // }
 }
 
-void decrypt(const int m, const int t, unsigned char* codeword, int goppa[t+1], int private_perm[1 << m], unsigned char** cleartext, int* shift) {
-    int sigma[t+1];
+void decrypt(const int m, const int t, unsigned char* codeword, uint16_t goppa[t+1], uint16_t private_perm[1 << m], unsigned char** cleartext, int* shift) {
+    uint16_t sigma[t+1];
     errorlocator(m, t, codeword, goppa, private_perm, sigma);
     // printf("\n Codeword:");
     // for (int i = 0; i < (1 << (m-3)); i++) {
@@ -119,8 +119,8 @@ int main(int argc, char *argv[]) {
     }
 
 
-    const int m = 8; // > 3
-    const int t = 11; // prime
+    const int m = 4; // > 3
+    const int t = 2; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
@@ -152,16 +152,16 @@ int main(int argc, char *argv[]) {
     fclose(fp_ciphertext);
 
     // read the private key and split it into its two components goppa poly and private perm
-    int goppa[t+1]; int private_perm[1 << m];
+    uint16_t goppa[t+1]; uint16_t private_perm[1 << m];
     FILE *fp_secretkey = fopen(argv[2], "rb");
     if (fp_secretkey == NULL) {
         printf("Value of errno: %d\n", errno);
         perror("Error opening secret key file:");
         return 2;
     }
-    fread(goppa, sizeof(int), t+1, fp_secretkey);
-    fseek(fp_secretkey, (t+1)*sizeof(int), SEEK_SET);
-    fread(private_perm, 1 <<m, sizeof(int), fp_secretkey);
+    fread(goppa, sizeof(uint16_t), t+1, fp_secretkey);
+    fseek(fp_secretkey, (t+1)*sizeof(uint16_t), SEEK_SET);
+    fread(private_perm, 1 <<m, sizeof(uint16_t), fp_secretkey);
     fclose(fp_secretkey);
     // printf("Goppa poly:");
     // for (int i = 0; i <= t; i++) {

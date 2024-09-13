@@ -6,7 +6,7 @@
 
 
 
-void encrypt(const int m, const int t, unsigned char** msg, int Q[t][(1 << m)-m*t], unsigned char codeword[(1 << (m-3))], int* shift) {
+void encrypt(const int m, const int t, unsigned char** msg, uint16_t Q[t][(1 << m)-m*t], unsigned char codeword[(1 << (m-3))], int* shift) {
     // want to use matrix multiplication but this is inefficient...
     // Q*msg would give the top m*t bits of the codeword (the redundancy), interpreted as t field elements of F_2^m
     // implement quick XOR matrix-vector multiplication
@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    const int m = 8; // > 3
-    const int t = 11; // prime
+    const int m = 4; // > 3
+    const int t = 2; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
@@ -95,10 +95,10 @@ int main(int argc, char *argv[]) {
         perror("Error opening public key file:");
         return 2;
     }
-    int Q[t][(1<<m) - m*t];
+    uint16_t Q[t][(1<<m) - m*t];
     for (int i = 0; i < t; i++) {
-        fseek(fp_pubkey, sizeof(int)*i*((1<<m)-m*t), SEEK_SET);
-        fread(Q[i], sizeof(int), (1<<m)-m*t, fp_pubkey);
+        fseek(fp_pubkey, sizeof(uint16_t)*i*((1<<m)-m*t), SEEK_SET);
+        fread(Q[i], sizeof(uint16_t), (1<<m)-m*t, fp_pubkey);
     }
     fclose(fp_pubkey);
     // the first 16bit integer in fp_encrypted denotes the padding, and overwrites file if it exists by reading

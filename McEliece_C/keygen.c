@@ -8,15 +8,15 @@
 
 #include "mceliece_supp.h"
 
-int* randomgoppa(const int m, const int t, int goppa[t+1]) {
+void randomgoppa(const int m, const int t, uint16_t goppa[t+1]) {
     // this picks a random polynomial of degree t that has no zeros.
     // Pick t prime, this makes the polynomial guaranteed to be irreducible (Rabin's algorithm for irreducibility).
 
-    int X[2];
+    uint16_t X[2];
     X[0] = 0;
     X[1] = 1;
     // now X is the identity poly
-    int test[t];
+    uint16_t test[t];
     test[0] = 1; // this makes sure test is not 0 in the first run
     goppa[t] = 1;
     // goppa is not necessarily irreducible! But according to Rabin, f of degree t with no zeros is irreducible if and only if it divides X^{2^(mt)}-X
@@ -31,17 +31,15 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
     }
     FILE* fp = fopen("../mceliece_secret.key","wb");
     if (fp == NULL) {
-        perror("Error opening file for writing");
-        return NULL;        ;
+        perror("Error opening file for writing");;
     }
-    fwrite(goppa, sizeof(int)*(t+1), 1, fp);
+    fwrite(goppa, sizeof(uint16_t)*(t+1), 1, fp);
     fclose(fp);
-    return goppa;
 }
 
-void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], int private_perm[1 << m]) {
+void keygen(const int m, const int t, uint16_t Q[t][(1 << m)-m*t], uint16_t goppa[t+1], uint16_t private_perm[1 << m]) {
     // generates public and private keys. Q is the public key, and private_perm and private
-    memset(goppa, 0, sizeof(int) * (t+1));
+    memset(goppa, 0, sizeof(uint16_t) * (t+1));
     randomgoppa(m,t, goppa);
     // generate random perm of all field elements
     random_perm(1 << m, private_perm);
@@ -50,7 +48,7 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
         perror("Error opening file for writing");
         return;
     }
-    size_t written = fwrite(private_perm, sizeof(int), 1 << m, fp);
+    size_t written = fwrite(private_perm, sizeof(uint16_t), 1 << m, fp);
     if (written != (1 << m)) {
         perror("Error writing to file");
         fclose(fp);
@@ -58,20 +56,20 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
     }
     fclose(fp);
     // create parity check matrix H = HG * Hhat
-    int Hhat[t][1 << m];
+    uint16_t Hhat[t][1 << m];
     for (int i = 0; i < t; i++) {
         for (int j = 0; j <= (1 << m); j++) {
             Hhat[i][j] = galois_single_divide(galois_pow(private_perm[j],i,m), galois_eval_poly(private_perm[j],t,goppa, m),m);
         }
     }
-    int HG[t][t];
+    uint16_t HG[t][t];
     memset(HG, 0, sizeof(HG));
     for (int i = 0; i < t; i++) {
         for (int j = 0; j <= i; j++) {
             HG[i][j] = goppa[t-i+j];
         }
     }
-    int H[t][1 << m];
+    uint16_t H[t][1 << m];
     multiply_matrix(t, t, 1<<m, HG,Hhat,H, m);
     // row reduce H while interpreted as a matrix of 0s and 1s
     // have H[m*i+r][j] = (H[i][j] << r) % 1
@@ -134,38 +132,38 @@ int main() {
         /* panic! the library couldn't be initialized; it is not safe to use */
     }
     //
-    const int m = 8;
-    const int t = 11; // pick prime
-    int Q[t][(1 <<m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
-    int test[1<<m];
-    memset(test, 0, sizeof(test));
+    const int m = 4;
+    const int t = 2; // pick prime
+    uint16_t Q[t][(1 <<m)-m*t]; uint16_t goppa[t+1]; uint16_t private_perm[1 << m];
     keygen(m,t,Q,goppa,private_perm);
-    // printf("Goppa poly:");
-    // for (int i = 0; i <= t; i++) {
-    //     printf("%d ",goppa[i]);
-    // }
-    // printf("\n Perm:");
-    // for (int i = 0; i < (1<<m); i++) {
-    //     printf("%d ",private_perm[i]);
-    // }
+    uint16_t test[1<<m];
+    memset(test, 0, sizeof(test));
+    printf("Goppa poly:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",goppa[i]);
+    }
+    printf("\n Perm:");
+    for (int i = 0; i < (1<<m); i++) {
+        printf("%d ",private_perm[i]);
+    }
     FILE* fp = fopen("../mceliece_secret.key","rb");
-    fseek(fp, (t+1)*sizeof(int), SEEK_SET);
-    size_t read = fread(test, sizeof(int), 1 << m, fp);
+    fseek(fp, (t+1)*sizeof(uint16_t), SEEK_SET);
+    size_t read = fread(test, sizeof(uint16_t), 1 << m, fp);
     if (read != (1 << m)) {
         perror("Error reading from file");
         fclose(fp);
         return 1;
     }
     fclose(fp);
-    // printf("\n file:");
-    // for (int i = 0; i < (1<<m); i++) {
-    //     printf("%d ",test[i]);
-    // }
-    // bool same = true;
-    // for (int i = 0; i < (1<<m); i++) {
-    //     if (test[i] != private_perm[i]) {
-    //         same = false;
-    //     }
-    // }
-    // printf("\n same:%d",same);
+    printf("\n file:");
+    for (int i = 0; i < (1<<m); i++) {
+        printf("%d ",test[i]);
+    }
+    bool same = true;
+    for (int i = 0; i < (1<<m); i++) {
+        if (test[i] != private_perm[i]) {
+            same = false;
+        }
+    }
+    printf("\n same:%d",same);
 }

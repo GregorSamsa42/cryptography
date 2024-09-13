@@ -3,7 +3,7 @@
 #include "sodium.h"
 
 
-void XOR_bits_in_place(unsigned char* a, const int b, const int bit_a, const int bit_b) {
+void XOR_bits_in_place(unsigned char* a, const uint16_t b, const int bit_a, const int bit_b) {
     // XORs the bit_a-th bit of a with the bit_b-th bit of b
     if (bit_a >= bit_b) {
         *a ^= ((b & (1 << bit_b)) << (bit_a - bit_b));
@@ -25,7 +25,7 @@ void swap_bytes(unsigned char* a, unsigned char* b, const int bit_a, const int b
     }
 }
 
-bool fully_zero(const int d, const int poly[d+1]) {
+bool fully_zero(const int d, const uint16_t poly[d+1]) {
     // tests if a polynomial is zero
     int sum = 0;
     for (int i = 0; i < d; i++) {
@@ -49,7 +49,7 @@ int galois_pow(const int a, const int b, const int w) {
 }
 
 
-void random_perm(const int n, int perm[n]) {
+void random_perm(const int n, uint16_t perm[n]) {
     // perm needs to have allocated n ints of memory
     for (int i = 0; i < n; i++) {
         perm[i] = i;
@@ -79,7 +79,7 @@ void generate_error(const int n, const int w, unsigned char error[n]) {
     }
 }
 
-void multiply_matrix(const int d1, const int d2, const int d3, int m1[d1][d2], int m2[d2][d3], int result[d1][d3], const int m) {
+void multiply_matrix(const int d1, const int d2, const int d3, uint16_t m1[d1][d2], uint16_t m2[d2][d3], uint16_t result[d1][d3], const int m) {
     // m1 has dimensions d1 x d2, and m2 has dimensions d2 x d3
     for (int i = 0; i < d1; i++) {
         for (int j = 0; j < d3; j++) {
@@ -91,7 +91,7 @@ void multiply_matrix(const int d1, const int d2, const int d3, int m1[d1][d2], i
     }
 }
 
-void swap_col(const int i, const int j, const int d1, const int d2, int H[d1][d2]) {
+void swap_col(const int i, const int j, const int d1, const int d2, uint16_t H[d1][d2]) {
     for (int row = 0; row < d1; row++) {
         const int temp = H[row][i];
         H[row][i] = H[row][j];
@@ -103,18 +103,18 @@ void swap_col(const int i, const int j, const int d1, const int d2, int H[d1][d2
 // polynomial manipulation methods: note we always give the degree of a polynomial: the methods then ignore any coefficients above
 
 
-int galois_eval_poly(const int a, const int d, const int poly[d+1], const int w) {
+int galois_eval_poly(const int a, const int d, const uint16_t poly[d+1], const int w) {
     // degree is degree of poly: due to type decay this information is lost after passing
     int result = 0;
     for (int bit = 0; bit <= d; bit++) {
-        int temp = poly[bit];
+        uint16_t temp = poly[bit];
         temp = galois_single_multiply(temp, galois_pow(a, bit, w), w);
         result = result ^ temp;
     }
     return result;
 }
 
-bool has_zeroes(const int d, const int poly[d+1], const int w) {
+bool has_zeroes(const int d, const uint16_t poly[d+1], const int w) {
     for (int i = 0; i < (1 << w); i++) {
         if (galois_eval_poly(i, d, poly, w) == 0) {
             return true;
@@ -123,7 +123,7 @@ bool has_zeroes(const int d, const int poly[d+1], const int w) {
     return false;
 }
 
-void add_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], int* result) {
+void add_poly(const int d1, const int d2, const uint16_t poly1[d1+1], const uint16_t poly2[d2+1], uint16_t* result) {
     // adds two polys with coefficients in F_2^m (actually for any m, not just the fixed one here)
     // we will only ever call this method with d1 > d2, so assume this is the case for simplicity.
     // result should have d1+1 integers allocated
@@ -137,20 +137,20 @@ void add_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2
     }
 }
 
-void mult_by_var_poly(const int d, const int n, const int poly1[d+1], int* result) {
+void mult_by_var_poly(const int d, const int n, const uint16_t poly1[d+1], uint16_t* result) {
     // multiplies p(x) by x^^n
     // result must have d+n+1 integers allocated already (but this is guaranteed by mult_poly)
-    memset(result, 0, sizeof(int) * (d+n+1));
+    memset(result, 0, sizeof(uint16_t) * (d+n+1));
     for (int i = n; i <= d+n; i++) {
         result[i] = poly1[i-n];
     }
 }
 
-void mult_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], int* result, const int w) {
+void mult_poly(const int d1, const int d2, const uint16_t poly1[d1+1], const uint16_t poly2[d2+1], uint16_t* result, const int w) {
     // result needs d1+d2+1 * sizeof(int) allocated space
     for (int j = 0; j <= d2; j++) {
-        int* temp = malloc(sizeof(int) * (d1+d2+1));
-        memset(temp, 0, sizeof(int) * (d1+d2+1));
+        uint16_t* temp = malloc(sizeof(uint16_t) * (d1+d2+1));
+        memset(temp, 0, sizeof(uint16_t) * (d1+d2+1));
         mult_by_var_poly(d1, j, poly1, temp);
         for (int k = 0; k <= d1+d2; k++) {
             temp[k] = galois_single_multiply(temp[k], poly2[j], w);
@@ -160,7 +160,7 @@ void mult_poly(const int d1, const int d2, const int poly1[d1+1], const int poly
     }
 }
 
-int poly_degree(const int d, const int poly[d+1]) {
+int poly_degree(const int d, const uint16_t poly[d+1]) {
     // outputs the actual degree of a polynomial with d coefficients
     // if it is zero, output -1
     for (int i = d; i >= 0; i--) {
@@ -171,7 +171,7 @@ int poly_degree(const int d, const int poly[d+1]) {
     return -1;
 }
 
-void reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1], int* quotient, const int w) {
+void reduce_mod_poly(const int d1, int d2, uint16_t poly1[d1+1], const uint16_t poly2[d2+1], uint16_t* quotient, const int w) {
 
     // reduces poly1 mod poly2 within F_2^w in place and returns quotient
     // poly2 must be non-zero
@@ -183,7 +183,7 @@ void reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1
     }
     for (int i = d1; i >= d2; i--) {
         // create temp poly that is poly2 scaled appropriately, and subtract it from poly1
-        int temp[i+1];
+        uint16_t temp[i+1];
         mult_by_var_poly(d2, i-d2, poly2, temp);
         // note poly2[d2] is guaranteed to be non-zero here
         const int factor = galois_single_divide(poly1[i],poly2[d2],w);
@@ -192,8 +192,8 @@ void reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1
         }
         // add the appropriate poly to the quotient
         // temp_quotient will have degree at most i-d2 but give it more to prevent garbage values
-        int temp_quotient[d1-d2+1];
-        memset(temp_quotient, 0, sizeof(int) * (d1-d2+1));
+        uint16_t temp_quotient[d1-d2+1];
+        memset(temp_quotient, 0, sizeof(uint16_t) * (d1-d2+1));
         temp_quotient[i-d2] = factor;
         add_poly(d1-d2, i-d2, quotient, temp_quotient, quotient);
         // subtract temp off of poly1
@@ -201,44 +201,44 @@ void reduce_mod_poly(const int d1, int d2, int poly1[d1+1], const int poly2[d2+1
     }
 }
 
-void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], const int w, int* factor1, int* factor2, int* gcd) {
+void EEA_standard(const int d1, const int d2, const uint16_t poly1[d1+1], const uint16_t poly2[d2+1], const int w, uint16_t* factor1, uint16_t* factor2, uint16_t* gcd) {
     // initialise variables in Euclid's algorithm. Want r - q*g = rem = u*poly1 + v*poly2.
     // again for simplicity wlog d1 <= d2. If not code will not work but this is OK - we are only using it in this way
     // in practice just reduce_mod the first poly before inputting
     // factor1,factor2,gcd require d2+1 allocated integers
-    int* r = malloc(sizeof(int) * (d2+1));
-    memset(r, 0, sizeof(int) * (d2+1));
+    uint16_t* r = malloc(sizeof(uint16_t) * (d2+1));
+    memset(r, 0, sizeof(uint16_t) * (d2+1));
     for (int i = 0; i <= d1; i++) {
         r[i] = poly1[i];
     }
-    int* g = malloc(sizeof(int) * (d2+1));
-    memset(g, 0, sizeof(int) * (d2+1));
+    uint16_t* g = malloc(sizeof(uint16_t) * (d2+1));
+    memset(g, 0, sizeof(uint16_t) * (d2+1));
     for (int i = 0; i <= d2; i++) {
         g[i] = poly2[i];
     }
     // note that for the Bezout coefficients we know they have degrees bounded by d2 in every step.
-    int* u = malloc(sizeof(int) * (d2+1));
-    memset(u, 0, sizeof(int) * (d2+1));
-    int* u1 = malloc(sizeof(int) * (d2+1));
-    memset(u1, 0, sizeof(int) * (d2+1));
+    uint16_t* u = malloc(sizeof(uint16_t) * (d2+1));
+    memset(u, 0, sizeof(uint16_t) * (d2+1));
+    uint16_t* u1 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(u1, 0, sizeof(uint16_t) * (d2+1));
     u1[0] = 1;
-    int* v = malloc(sizeof(int) * (d2+1));
-    memset(v, 0, sizeof(int) * (d2+1));
+    uint16_t* v = malloc(sizeof(uint16_t) * (d2+1));
+    memset(v, 0, sizeof(uint16_t) * (d2+1));
     v[0] = 1;
-    int* v1 = malloc(sizeof(int) * (d2+1));
-    memset(v1, 0, sizeof(int) * (d2+1));
-    int* u2 = malloc(sizeof(int) * (d2+1));
-    memset(u2, 0, sizeof(int) * (d2+1));
-    int* v2 = malloc(sizeof(int) * (d2+1));
-    memset(v2, 0, sizeof(int) * (d2+1));
+    uint16_t* v1 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(v1, 0, sizeof(uint16_t) * (d2+1));
+    uint16_t* u2 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(u2, 0, sizeof(uint16_t) * (d2+1));
+    uint16_t* v2 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(v2, 0, sizeof(uint16_t) * (d2+1));
     int remdeg = 1;
     // terminate when the remainder is zero (i.e. degree -1), then can read off Bezout coefficients from u and v
     while (remdeg > -1) {
-        int* q = malloc(sizeof(int) * (d2+1));
-        memset(q, 0, sizeof(int) * (d2+1));
+        uint16_t* q = malloc(sizeof(uint16_t) * (d2+1));
+        memset(q, 0, sizeof(uint16_t) * (d2+1));
         reduce_mod_poly(d2, d2, r, g, q, w);
-        int* temp = malloc(sizeof(int) * (d2+1));
-        memset(temp, 0, sizeof(int) * (d2+1));
+        uint16_t* temp = malloc(sizeof(uint16_t) * (d2+1));
+        memset(temp, 0, sizeof(uint16_t) * (d2+1));
         for (int j = 0; j <= d2; j++) {
             temp[j] = r[j];
         }
@@ -263,11 +263,11 @@ void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int p
             v1[i] = v[i];
         }
         // must allocate more room for q_times_v because of how mult_poly works
-        int* q_times_v = malloc(sizeof(int) * (2*d2+1));
-        memset(q_times_v, 0, sizeof(int) * (2*d2+1));
+        uint16_t* q_times_v = malloc(sizeof(uint16_t) * (2*d2+1));
+        memset(q_times_v, 0, sizeof(uint16_t) * (2*d2+1));
         mult_poly(d2, d2, q, v, q_times_v,w);
-        int* q_times_u = malloc(sizeof(int) * (2*d2+1));
-        memset(q_times_u, 0, sizeof(int) * (2*d2+1));
+        uint16_t* q_times_u = malloc(sizeof(uint16_t) * (2*d2+1));
+        memset(q_times_u, 0, sizeof(uint16_t) * (2*d2+1));
         mult_poly(d2, d2, q, u, q_times_u,w);
         // but we know that in reality q_times_u and q_times_v have degree at most d2.
         add_poly(d2,d2,u2,q_times_u,u);
@@ -295,43 +295,43 @@ void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int p
     free(r);
     free(g);
 }
-    void EEA_patterson(const int d1, const int d2, const int poly1[d1+1], const int goppa[d2+1], int* A, int* B, const int w) {
+    void EEA_patterson(const int d1, const int d2, const uint16_t poly1[d1+1], const uint16_t goppa[d2+1], uint16_t* A, uint16_t* B, const int w) {
     // initialise variables in Euclid's algorithm. Want r - q*g = rem = u*poly1 + v*poly2.
     // same as before, except the break condition and the outputs are different
     // factor1,factor2,gcd require d2+1 allocated integers
-    int* r = malloc(sizeof(int) * (d2+1));
-    memset(r, 0, sizeof(int) * (d2+1));
+    uint16_t* r = malloc(sizeof(uint16_t) * (d2+1));
+    memset(r, 0, sizeof(uint16_t) * (d2+1));
     for (int i = 0; i <= d1; i++) {
         r[i] = poly1[i];
     }
-    int* g = malloc(sizeof(int) * (d2+1));
-    memset(g, 0, sizeof(int) * (d2+1));
+    uint16_t* g = malloc(sizeof(uint16_t) * (d2+1));
+    memset(g, 0, sizeof(uint16_t) * (d2+1));
     for (int i = 0; i <= d2; i++) {
         g[i] = goppa[i];
     }
     // note that for the Bezout coefficients we know they have degrees bounded by d2 in every step.
-    int* u = malloc(sizeof(int) * (d2+1));
-    memset(u, 0, sizeof(int) * (d2+1));
-    int* u1 = malloc(sizeof(int) * (d2+1));
-    memset(u1, 0, sizeof(int) * (d2+1));
+    uint16_t* u = malloc(sizeof(uint16_t) * (d2+1));
+    memset(u, 0, sizeof(uint16_t) * (d2+1));
+    uint16_t* u1 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(u1, 0, sizeof(uint16_t) * (d2+1));
     u1[0] = 1;
-    int* v = malloc(sizeof(int) * (d2+1));
-    memset(v, 0, sizeof(int) * (d2+1));
+    uint16_t* v = malloc(sizeof(uint16_t) * (d2+1));
+    memset(v, 0, sizeof(uint16_t) * (d2+1));
     v[0] = 1;
-    int* v1 = malloc(sizeof(int) * (d2+1));
-    memset(v1, 0, sizeof(int) * (d2+1));
-    int* u2 = malloc(sizeof(int) * (d2+1));
-    memset(u2, 0, sizeof(int) * (d2+1));
-    int* v2 = malloc(sizeof(int) * (d2+1));
-    memset(v2, 0, sizeof(int) * (d2+1));
+    uint16_t* v1 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(v1, 0, sizeof(uint16_t) * (d2+1));
+    uint16_t* u2 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(u2, 0, sizeof(uint16_t) * (d2+1));
+    uint16_t* v2 = malloc(sizeof(uint16_t) * (d2+1));
+    memset(v2, 0, sizeof(uint16_t) * (d2+1));
     int remdeg = d2;
     // terminate when the remainder is zero (i.e. degree -1), then can read off Bezout coefficients from u and v
     while (remdeg > d2/2 || poly_degree(d2,u1) > (d2-1)/2) {
-        int* q = malloc(sizeof(int) * (d2+1));
-        memset(q, 0, sizeof(int) * (d2+1));
+        uint16_t* q = malloc(sizeof(uint16_t) * (d2+1));
+        memset(q, 0, sizeof(uint16_t) * (d2+1));
         reduce_mod_poly(d2, d2, r, g, q, w);
-        int* temp = malloc(sizeof(int) * (d2+1));
-        memset(temp, 0, sizeof(int) * (d2+1));
+        uint16_t* temp = malloc(sizeof(uint16_t) * (d2+1));
+        memset(temp, 0, sizeof(uint16_t) * (d2+1));
         for (int j = 0; j <= d2; j++) {
             temp[j] = r[j];
         }
@@ -356,11 +356,11 @@ void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int p
             v1[i] = v[i];
         }
         // must allocate more room for q_times_v because of how mult_poly works
-        int* q_times_v = malloc(sizeof(int) * (2*d2+1));
-        memset(q_times_v, 0, sizeof(int) * (2*d2+1));
+        uint16_t* q_times_v = malloc(sizeof(uint16_t) * (2*d2+1));
+        memset(q_times_v, 0, sizeof(uint16_t) * (2*d2+1));
         mult_poly(d2, d2, q, v, q_times_v,w);
-        int* q_times_u = malloc(sizeof(int) * (2*d2+1));
-        memset(q_times_u, 0, sizeof(int) * (2*d2+1));
+        uint16_t* q_times_u = malloc(sizeof(uint16_t) * (2*d2+1));
+        memset(q_times_u, 0, sizeof(uint16_t) * (2*d2+1));
         mult_poly(d2, d2, q, u, q_times_u,w);
         // but we know that in reality q_times_u and q_times_v have degree at most d2.
         add_poly(d2,d2,u2,q_times_u,u);
@@ -388,14 +388,14 @@ void EEA_standard(const int d1, const int d2, const int poly1[d1+1], const int p
 }
 
 
-bool invert_poly(const int d, int poly[d+1], const int dm, const int modulus[dm+1], int result[dm], const int w) {
+bool invert_poly(const int d, uint16_t poly[d+1], const int dm, const uint16_t modulus[dm+1], uint16_t result[dm], const int w) {
     // inverts poly modulo the polynomial modulus, within F_2^w
     // if invertible, returns true, else returns false.
     // memset(result, 0, sizeof(int) * (dm+1));
-    int factor[dm+1];
-    int gcd[dm+1];
-    memset(gcd, 0, sizeof(int) * (dm+1));
-    memset(factor, 0, sizeof(int) * (dm+1));
+    uint16_t factor[dm+1];
+    uint16_t gcd[dm+1];
+    memset(gcd, 0, sizeof(uint16_t) * (dm+1));
+    memset(factor, 0, sizeof(uint16_t) * (dm+1));
     // following line isn't really needed in our implementation but might be needed in theory
     // reduce_mod_poly(d,dm,poly,modulus,factor,w);
     EEA_standard(d,dm,poly,modulus,w, result, factor, gcd);
@@ -412,20 +412,20 @@ bool invert_poly(const int d, int poly[d+1], const int dm, const int modulus[dm+
 
 }
 
-void poly_pow_two_mod(const int d1, const int d2, int poly1[d1+1], const int poly2[d2+1], const int exponent, int* result, const int w) {
+void poly_pow_two_mod(const int d1, const int d2, uint16_t poly1[d1+1], const uint16_t poly2[d2+1], const int exponent, uint16_t* result, const int w) {
     // only works for positive exponents. computes poly1^(2^exponent) mod poly2.
     // result must have d2 integers allocated
     // note poly1 is changed here, but this does not pose a problem for our implementations
-    int* q = malloc(sizeof(int) * (d1+d2+1));
-    memset(q, 0, sizeof(int) * (d1+d2+1));
-    memset(result, 0, sizeof(int) * d2);
+    uint16_t* q = malloc(sizeof(uint16_t) * (d1+d2+1));
+    memset(q, 0, sizeof(uint16_t) * (d1+d2+1));
+    memset(result, 0, sizeof(uint16_t) * d2);
     reduce_mod_poly(d1, d2, poly1, poly2, q, w);
     for (int i = 0; i <= d1; i++) {
         result[i] = poly1[i];
     }
     for (int i = 0; i < exponent; i++) {
-        int temp[2*d2-1];
-        memset(temp, 0, sizeof(int) * (2*d2-1));
+        uint16_t temp[2*d2-1];
+        memset(temp, 0, sizeof(uint16_t) * (2*d2-1));
         mult_poly(d2-1, d2-1, result, result, temp, w);
         reduce_mod_poly(2*d2-2, d2, temp, poly2, q, w);
         for (int j = 0; j < d2; j++) {
@@ -436,7 +436,7 @@ void poly_pow_two_mod(const int d1, const int d2, int poly1[d1+1], const int pol
 
 }
 
-void sqrt_poly(const int d1, const int d2, int poly1[d1+1], const int poly2[d2+1], int* result, const int w) {
+void sqrt_poly(const int d1, const int d2, uint16_t poly1[d1+1], const uint16_t poly2[d2+1], uint16_t* result, const int w) {
     // this works if poly2 is irreducible over F_2^w.
     // Have a field with 2^(mt) elements, so Frobenius is the identity
     // result must have d2 integers allocated
@@ -447,7 +447,7 @@ void sqrt_poly(const int d1, const int d2, int poly1[d1+1], const int poly2[d2+1
 
 // the following are specific algorithms for row/col operations on matrices containing elements in F_2^m interpreted as m-bit vectors
 
-void swap_row(const int i, const int r1, const int j, const int r2, int d1, const int d2, int H[d1][d2]) {
+void swap_row(const int i, const int r1, const int j, const int r2, int d1, const int d2, uint16_t H[d1][d2]) {
     // note we are swapping row m*i + r1 and row m*j + r2
     for (int k = 0; k < d2; k++) {
         if ((H[i][k] >> r1) & 1 && ~(H[j][k] >> r2) & 1)  {
@@ -461,7 +461,7 @@ void swap_row(const int i, const int r1, const int j, const int r2, int d1, cons
     }
 }
 
-void add_row(const int i, const int r1, const int j, const int r2, int d1, const int d2, int H[d1][d2]) {
+void add_row(const int i, const int r1, const int j, const int r2, int d1, const int d2, uint16_t H[d1][d2]) {
     // note we are adding row m*i + r1 to row m*j + r2
     if (r2 > r1) {
         for (int col = 0; col < d2; col++) {
@@ -475,7 +475,7 @@ void add_row(const int i, const int r1, const int j, const int r2, int d1, const
     }
 }
 
-void row_reduce(const int d1, const int d2, int H[d1][d2], const int m) {
+void row_reduce(const int d1, const int d2, uint16_t H[d1][d2], const int m) {
     // this row reduces a matrix without doing any column operations, might have some cols of zeros afterwards
     int count = 0;
     bool increase = false;
@@ -515,7 +515,7 @@ void row_reduce(const int d1, const int d2, int H[d1][d2], const int m) {
 
 }
 
-bool fully_reduced_parity(const int d1, const int d2, const int H[d1][d2], const int m, int* failed_col) {
+bool fully_reduced_parity(const int d1, const int d2, const uint16_t H[d1][d2], const int m, int* failed_col) {
     bool fully_reduced = true;
     for (int col = 0; col < d1*m; col++) {
         if ((H[col / m][col] >> (col % m) & 1) != 1) {
