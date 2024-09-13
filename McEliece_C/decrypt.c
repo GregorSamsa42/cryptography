@@ -119,8 +119,8 @@ int main(int argc, char *argv[]) {
     }
 
 
-    const int m = 8; // > 3
-    const int t = 11; // prime
+    const int m = 11; // > 3
+    const int t = 50; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown

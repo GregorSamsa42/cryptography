@@ -134,20 +134,20 @@ int main() {
         /* panic! the library couldn't be initialized; it is not safe to use */
     }
     //
-    const int m = 8;
-    const int t = 11; // pick prime
+    const int m = 11;
+    const int t = 50; // pick prime
     int Q[t][(1 <<m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
     int test[1<<m];
     memset(test, 0, sizeof(test));
     keygen(m,t,Q,goppa,private_perm);
-    // printf("Goppa poly:");
-    // for (int i = 0; i <= t; i++) {
-    //     printf("%d ",goppa[i]);
-    // }
-    // printf("\n Perm:");
-    // for (int i = 0; i < (1<<m); i++) {
-    //     printf("%d ",private_perm[i]);
-    // }
+    printf("Goppa poly:");
+    for (int i = 0; i <= t; i++) {
+        printf("%d ",goppa[i]);
+    }
+    printf("\n Perm:");
+    for (int i = 0; i < (1<<m); i++) {
+        printf("%d ",private_perm[i]);
+    }
     FILE* fp = fopen("../mceliece_secret.key","rb");
     fseek(fp, (t+1)*sizeof(int), SEEK_SET);
     size_t read = fread(test, sizeof(int), 1 << m, fp);
@@ -157,15 +157,15 @@ int main() {
         return 1;
     }
     fclose(fp);
-    // printf("\n file:");
-    // for (int i = 0; i < (1<<m); i++) {
-    //     printf("%d ",test[i]);
-    // }
-    // bool same = true;
-    // for (int i = 0; i < (1<<m); i++) {
-    //     if (test[i] != private_perm[i]) {
-    //         same = false;
-    //     }
-    // }
-    // printf("\n same:%d",same);
+    printf("\n file:");
+    for (int i = 0; i < (1<<m); i++) {
+        printf("%d ",test[i]);
+    }
+    bool same = true;
+    for (int i = 0; i < (1<<m); i++) {
+        if (test[i] != private_perm[i]) {
+            same = false;
+        }
+    }
+    printf("\n same:%d",same);
 }
