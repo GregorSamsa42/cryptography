@@ -1,8 +1,8 @@
-//
-// Created by linux on 09.09.24.
-//
+// supplementary functions for the McEliece cryptosystem
+
 #include <stdlib.h>
 #include "sodium.h"
+#include <string.h>
 #include <stdbool.h>
 #include "../galois/galois.h"
 

@@ -1,6 +1,7 @@
 
 #include "mceliece_supp.h"
 
+
 bool fully_zero(const int d, const int poly[d+1]) {
     // tests if a polynomial is zero
     int sum = 0;
@@ -125,14 +126,13 @@ void mult_by_var_poly(const int d, const int n, const int poly1[d+1], int* resul
 void mult_poly(const int d1, const int d2, const int poly1[d1+1], const int poly2[d2+1], int* result, const int w) {
     // result needs d1+d2+1 * sizeof(int) allocated space
     for (int j = 0; j <= d2; j++) {
-        int* temp = malloc(sizeof(int) * (d1+d2+1));
+        int temp[d1+d2+1];
         memset(temp, 0, sizeof(int) * (d1+d2+1));
         mult_by_var_poly(d1, j, poly1, temp);
         for (int k = 0; k <= d1+d2; k++) {
             temp[k] = galois_single_multiply(temp[k], poly2[j], w);
         }
         add_poly(d1+d2, d1+d2, result, temp, result);
-        free(temp);
     }
 }
 
@@ -392,7 +392,7 @@ void poly_pow_two_mod(const int d1, const int d2, int poly1[d1+1], const int pol
     // only works for positive exponents. computes poly1^(2^exponent) mod poly2.
     // result must have d2 integers allocated
     // note poly1 is changed here, but this does not pose a problem for our implementations
-    int* q = malloc(sizeof(int) * (d1+d2+1));
+    int q[d1+d2+1];
     memset(q, 0, sizeof(int) * (d1+d2+1));
     memset(result, 0, sizeof(int) * d2);
     reduce_mod_poly(d1, d2, poly1, poly2, q, w);
@@ -408,8 +408,6 @@ void poly_pow_two_mod(const int d1, const int d2, int poly1[d1+1], const int pol
             result[j] = temp[j];
         }
     }
-    free(q);
-
 }
 
 void sqrt_poly(const int d1, const int d2, int poly1[d1+1], const int poly2[d2+1], int* result, const int w) {
@@ -417,7 +415,7 @@ void sqrt_poly(const int d1, const int d2, int poly1[d1+1], const int poly2[d2+1
     // Have a field with 2^(mt) elements, so Frobenius is the identity
     // result must have d2 integers allocated
     // again note poly1 is not constant.
-    int t = poly_degree(d2, poly2);
+    const int t = poly_degree(d2, poly2);
     poly_pow_two_mod(d1,t,poly1,poly2,w*t-1, result, w);
 }
 
@@ -492,6 +490,7 @@ void row_reduce(const int d1, const int d2, int H[d1][d2], const int m) {
 }
 
 bool fully_reduced_parity(const int d1, const int d2, const int H[d1][d2], const int m, int* failed_col) {
+    // decides if the parity check matrix is in systematic form
     bool fully_reduced = true;
     for (int col = 0; col < d1*m; col++) {
         if ((H[col / m][col] >> (col % m) & 1) != 1) {

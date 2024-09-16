@@ -1,3 +1,8 @@
+// Implementation of the (modern) McEliece cryptosystem without CCA-2 conversion
+// Author: Georgi Kocharyan
+
+
+
 #include "sodium.h"
 #include <stdio.h>
 #include "../galois/galois.h"
