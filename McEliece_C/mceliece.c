@@ -213,13 +213,16 @@ void error_from_errorlocator(const int m, const int t, int sigma[t], int error[1
 
 void decrypt(const int m, const int t, int codeword[1 << m], int goppa[t+1], int private_perm[1 << m], int cleartext[(1 << m) - m*t]) {
     int sigma[t+1];
+    // find the error locator polynomial
     errorlocator(m, t, codeword, goppa, private_perm, sigma);
     printf("\n Error locator poly:");
     for (int i = 0; i <= t; i++) {
         printf("%d ",sigma[i]);
     }
     int error[1 << m];
+    // locate the error introduced
     error_from_errorlocator(m,t,sigma,error, private_perm);
+    // subtract it from the codeword, then the final 2^m-mt bits form the cleartext
     for (int i = 0; i < (1 << m)-m*t; i++) {
         cleartext[i] = codeword[i+m*t]^error[i+m*t];
     }
