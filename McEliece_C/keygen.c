@@ -1,6 +1,12 @@
-//
-// Created by linux on 09.09.24.
-//
+// Key pair generation for the McEliece cryptosystem
+// saves a private key in the format:
+// t+1 integers corresponding to the coefficients of the Goppa polynomial, starting with the constant coeff.
+// 2^m integers corresponding to the randomly selected private permutation
+// saves a public key in the form:
+// consecutive rows of the matrix Q of size t * (2^m-m*t), each entry is an integer
+// Author: Georgi Kocharyan
+
+
 #include "sodium.h"
 #include <stdio.h>
 #include "../galois/galois.h"
