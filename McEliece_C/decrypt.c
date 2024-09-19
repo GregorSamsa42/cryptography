@@ -107,6 +107,8 @@ void decrypt(const int m, const int t, unsigned char* codeword, int goppa[t+1], 
     }
     *shift = ((*shift + ((1 << m) - m*t)) % 8);
 }
+#define m 11
+#define t 47 // pick prime
 
 int main(int argc, char *argv[]) {
     // argv[1] is file to be decrypted, argv[2] the private key, and argv[3] the output if given
@@ -116,8 +118,6 @@ int main(int argc, char *argv[]) {
     }
 
 
-    const int m = 7; // > 3
-    const int t = 5; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
         fp_decrypted = fopen(argv[3], "wb");
     }
     else {
-        fp_decrypted = fopen("../decrypted_file", "wb");
+        fp_decrypted = fopen("decrypted_file", "wb");
     }
     // read the ciphertext into buffer and find out its size
     // note the first two chars of the ciphertext are a 16-bit integer denoting the size of the padding
@@ -149,7 +149,8 @@ int main(int argc, char *argv[]) {
     fclose(fp_ciphertext);
 
     // read the private key and split it into its two components goppa poly and private perm
-    int goppa[t+1]; int private_perm[1 << m];
+    int* goppa = malloc(sizeof(int) * (t+1));
+    int* private_perm = malloc(sizeof(int) * (1 << m));
     FILE *fp_secretkey = fopen(argv[2], "rb");
     if (fp_secretkey == NULL) {
         printf("Value of errno: %d\n", errno);
@@ -174,5 +175,7 @@ int main(int argc, char *argv[]) {
     // write to file, making sure to disregard the padding
     fwrite(cleartext, sizeof(unsigned char), ((file_size-2)/(1 << (m-3)))*((1<<m)-m*t)/8-(padding/8), fp_decrypted);
     free(buffer);
+    free(goppa);
+    free(private_perm);
     fclose(fp_decrypted);
 }

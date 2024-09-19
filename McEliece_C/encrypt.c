@@ -44,15 +44,16 @@ void encrypt(const int m, const int t, unsigned char** msg, int Q[t][(1 << m)-m*
         codeword[i] ^= error[i];
     }
 }
+#define m 11
+#define t 47 // pick prime
+int Q[t][(1 <<m)-m*t];
+
 int main(int argc, char *argv[]) {
  // argv[1] is the file to be encrypted, argv[2] is the public key. If argv[3] is supplied, this is the name of the output.
     if (argc != 3 && argc != 4) {
         printf("There should be two or three arguments.\n");
         return 1;
     }
-
-    const int m = 7; // > 3
-    const int t = 5; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
@@ -68,7 +69,7 @@ int main(int argc, char *argv[]) {
         fp_encrypted = fopen(argv[3], "wb");
     }
     else {
-        fp_encrypted = fopen("../encrypted_file", "wb");
+        fp_encrypted = fopen("encrypted_file", "wb");
     }
     // read the cleartext into buffer and find out its size
     fseek(fp_cleartext, 0, SEEK_END);
@@ -77,8 +78,8 @@ int main(int argc, char *argv[]) {
     // allocate enough space for the buffer to store the file plus padding
     // file_size is the number of chars. Add 2^m-mt bits to guarantee there are enough zeros at the end
     // must store how much padding we required for decryption!
-    unsigned char* buffer = malloc((file_size+ (1 << m - m*t)/8) * sizeof(char));
-    memset(buffer, 0, (file_size+ (1 << m - m*t)/8) * sizeof(char));
+    unsigned char* buffer = malloc((file_size+ ((1 << m) - m*t)/8) * sizeof(char));
+    memset(buffer, 0, (file_size+ ((1 << m)- m*t)/8) * sizeof(char));
     fread(buffer, file_size, 1, fp_cleartext);
     fclose(fp_cleartext);
     const u_int16_t padding = ((1 << m) - m*t) - ((8*file_size) % ((1 << m) - m*t));
@@ -89,7 +90,6 @@ int main(int argc, char *argv[]) {
         perror("Error opening public key file:");
         return 2;
     }
-    int Q[t][(1<<m) - m*t];
     for (int i = 0; i < t; i++) {
         fseek(fp_pubkey, sizeof(int)*i*((1<<m)-m*t), SEEK_SET);
         fread(Q[i], sizeof(int), (1<<m)-m*t, fp_pubkey);
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
         fp_encrypted = fopen(argv[3], "ab");
     }
     else {
-        fp_encrypted = fopen("../encrypted_file", "ab");
+        fp_encrypted = fopen("encrypted_file", "ab");
     }
     int shift = 0;
     // split the file to be encrypted into chunks of (2^m-mt) bits

@@ -3,7 +3,7 @@
 // t+1 integers corresponding to the coefficients of the Goppa polynomial, starting with the constant coeff.
 // 2^m integers corresponding to the randomly selected private permutation
 // saves a public key in the form:
-// consecutive rows of the matrix Q of size t * (2^m-m*t), each entry is an integer
+// consecutive rows of the matrix Q of size t * (2^m-m*t) from left to right, each entry is an integer
 // Author: Georgi Kocharyan
 
 
@@ -103,18 +103,17 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
         row_reduce(t,1<<m, H, m);
     }
     // H is now in systematic form. Return Q as the public key.
-    FILE* fp = fopen("../mceliece_public.key","wb");
+    FILE* fp = fopen("mceliece_public.key","wb");
     for (int i = 0; i < t; i++) {
         for (int j = 0; j < (1 << m)-m*t; j++) {
             Q[i][j] = H[i][j+m*t];
         }
-        // fseek(fp, i*((1 << m)-m*t)*sizeof(int), SEEK_SET);
         fwrite(Q[i], sizeof(int), ((1 << m)-m*t), fp);
     }
     fclose(fp);
 }
-#define m 7
-#define t 5 // pick prime
+#define m 11
+#define t 47 // pick prime
 int Q[t][(1 <<m)-m*t];
 int main() {
     if (sodium_init() < 0) {
@@ -125,7 +124,7 @@ int main() {
     int* goppa = malloc(sizeof(int) * (t+1));
     int* private_perm = malloc(sizeof(int) * (1 << m));
     keygen(m,t,Q,goppa,private_perm);
-    FILE* fp = fopen("../mceliece_secret.key","wb");
+    FILE* fp = fopen("mceliece_secret.key","wb");
     if (fp == NULL) {
         perror("Error opening file for writing");;
     }
