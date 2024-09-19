@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.22)
 project(cryptography C)
 
 set(CMAKE_C_STANDARD 11)
@@ -26,6 +26,7 @@ add_executable(decrypt
         McEliece_C/mceliece_supp.h
         McEliece_C/mceliece_supp.c)
 
+# find_library(sodiumlib sodium REQUIRED)
 
 target_link_libraries(keygen libsodium.a -lm)
 target_link_libraries(encrypt libsodium.a -lm)

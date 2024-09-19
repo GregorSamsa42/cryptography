@@ -116,8 +116,8 @@ int main(int argc, char *argv[]) {
     }
 
 
-    const int m = 11; // > 3
-    const int t = 50; // prime
+    const int m = 7; // > 3
+    const int t = 5; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
         ptr_buf = ptr_buf + (1 << (m-3));
     }
     // write to file, making sure to disregard the padding
-    fwrite(cleartext, sizeof(unsigned char), ((file_size-2)/(1 << (m-3)))*((1<<m)-m*t)/8-((padding+7)/8), fp_decrypted);
+    fwrite(cleartext, sizeof(unsigned char), ((file_size-2)/(1 << (m-3)))*((1<<m)-m*t)/8-(padding/8), fp_decrypted);
     free(buffer);
     fclose(fp_decrypted);
 }

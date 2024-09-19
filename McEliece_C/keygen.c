@@ -35,13 +35,6 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
         poly_pow_two_mod(1,t,X,goppa,m*t,test, m);
         add_poly(t,1,test,X, test);
     }
-    FILE* fp = fopen("../mceliece_secret.key","wb");
-    if (fp == NULL) {
-        perror("Error opening file for writing");
-        return NULL;        ;
-    }
-    fwrite(goppa, sizeof(int)*(t+1), 1, fp);
-    fclose(fp);
     return goppa;
 }
 
@@ -51,18 +44,6 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
     randomgoppa(m,t, goppa);
     // generate random perm of all field elements
     random_perm(1 << m, private_perm);
-    FILE* fp = fopen("../mceliece_secret.key","ab");
-    if (fp == NULL) {
-        perror("Error opening file for writing");
-        return;
-    }
-    size_t written = fwrite(private_perm, sizeof(int), 1 << m, fp);
-    if (written != (1 << m)) {
-        perror("Error writing to file");
-        fclose(fp);
-        return;
-    }
-    fclose(fp);
     // create parity check matrix H = HG * Hhat
     int Hhat[t][1 << m];
     for (int i = 0; i < t; i++) {
@@ -122,56 +103,43 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
         row_reduce(t,1<<m, H, m);
     }
     // H is now in systematic form. Return Q as the public key.
-    fp = fopen("../mceliece_public.key","wb");
-    fclose(fp);
-    fp = fopen("../mceliece_public.key","ab");
+    FILE* fp = fopen("../mceliece_public.key","wb");
     for (int i = 0; i < t; i++) {
         for (int j = 0; j < (1 << m)-m*t; j++) {
             Q[i][j] = H[i][j+m*t];
         }
-        fseek(fp, i*((1 << m)-m*t)*sizeof(int), SEEK_SET);
+        // fseek(fp, i*((1 << m)-m*t)*sizeof(int), SEEK_SET);
         fwrite(Q[i], sizeof(int), ((1 << m)-m*t), fp);
     }
     fclose(fp);
 }
-
+#define m 7
+#define t 5 // pick prime
+int Q[t][(1 <<m)-m*t];
 int main() {
     if (sodium_init() < 0) {
         /* panic! the library couldn't be initialized; it is not safe to use */
-    }
-    //
-    const int m = 11;
-    const int t = 50; // pick prime
-    int Q[t][(1 <<m)-m*t]; int goppa[t+1]; int private_perm[1 << m];
-    int test[1<<m];
-    memset(test, 0, sizeof(test));
-    keygen(m,t,Q,goppa,private_perm);
-    printf("Goppa poly:");
-    for (int i = 0; i <= t; i++) {
-        printf("%d ",goppa[i]);
-    }
-    printf("\n Perm:");
-    for (int i = 0; i < (1<<m); i++) {
-        printf("%d ",private_perm[i]);
-    }
-    FILE* fp = fopen("../mceliece_secret.key","rb");
-    fseek(fp, (t+1)*sizeof(int), SEEK_SET);
-    size_t read = fread(test, sizeof(int), 1 << m, fp);
-    if (read != (1 << m)) {
-        perror("Error reading from file");
-        fclose(fp);
         return 1;
     }
+    //
+    int* goppa = malloc(sizeof(int) * (t+1));
+    int* private_perm = malloc(sizeof(int) * (1 << m));
+    keygen(m,t,Q,goppa,private_perm);
+    FILE* fp = fopen("../mceliece_secret.key","wb");
+    if (fp == NULL) {
+        perror("Error opening file for writing");;
+    }
+    size_t written = fwrite(goppa, sizeof(int), t+1, fp);
+    if (written != (t+1)) {
+        perror("Error writing to file");
+        fclose(fp);
+    }
+    written = fwrite(private_perm, sizeof(int), 1 << m, fp);
+    if (written != (1 << m)) {
+        perror("Error writing to file");
+        fclose(fp);
+    }
     fclose(fp);
-    printf("\n file:");
-    for (int i = 0; i < (1<<m); i++) {
-        printf("%d ",test[i]);
-    }
-    bool same = true;
-    for (int i = 0; i < (1<<m); i++) {
-        if (test[i] != private_perm[i]) {
-            same = false;
-        }
-    }
-    printf("\n same:%d",same);
+    free(goppa);
+    free(private_perm);
 }

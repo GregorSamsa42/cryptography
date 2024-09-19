@@ -43,14 +43,6 @@ void encrypt(const int m, const int t, unsigned char** msg, int Q[t][(1 << m)-m*
     for (int i = 0; i < (1 << (m-3)); i++) {
         codeword[i] ^= error[i];
     }
-    printf("Codeword: \n");
-    for (int i = 0; i < (1 << (m-3)); i++) {
-        printf("%d ", codeword[i]);
-    }
-    printf("Error: \n");
-for (int i = 0; i < (1 << (m-3)); i++) {
-    printf("%d ", error[i]);
-}
 }
 int main(int argc, char *argv[]) {
  // argv[1] is the file to be encrypted, argv[2] is the public key. If argv[3] is supplied, this is the name of the output.
@@ -59,8 +51,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    const int m = 11; // > 3
-    const int t = 50; // prime
+    const int m = 7; // > 3
+    const int t = 5; // prime
     // pubkey has length t(2^m-m*t) integers
 
     // length of cleartext is unknown
