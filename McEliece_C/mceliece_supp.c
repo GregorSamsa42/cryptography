@@ -6,17 +6,12 @@
 void XOR_bits_in_place(unsigned char* a, const int b, const int bit_a, const int bit_b) {
     // XORs the bit_a-th bit of a with the bit_b-th bit of b
     if (bit_a >= bit_b) {
-        *a ^= ((b & (1 << bit_b)) << (bit_a - bit_b));
+        *a ^= (unsigned char)((b & (1 << bit_b)) << (bit_a - bit_b));
     }
     else {
-        *a ^= ((b & (1 << bit_b)) >> (bit_b - bit_a));
+        *a ^= (unsigned char)((b & (1 << bit_b)) >> (bit_b - bit_a));
     }
 }
-
-// unsigned char XOR_bits_in_place(const unsigned char a, const unsigned char b, const int bit_a, const int bit_b) {
-//     // XORs the bit_a-th bit of a with the bit_b-th bit of b
-//     return a ^ ((b & (1 << bit_b)) << (bit_a - bit_b));
-// }
 
 void swap_bytes(unsigned char* a, unsigned char* b, const int bit_a, const int bit_b) {
     if (((*a >> bit_a) & 1) != ((*b >> bit_b) & 1)) {

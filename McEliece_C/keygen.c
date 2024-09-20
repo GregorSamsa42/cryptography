@@ -33,7 +33,7 @@ int* randomgoppa(const int m, const int t, int goppa[t+1]) {
         memset(test, 0, sizeof(test));
         // note we compute X^{2^(mt)}-X over and over in every run. This is because it is vastly more efficient to immediately compute it mod goppa.
         poly_pow_two_mod(1,t,X,goppa,m*t,test, m);
-        add_poly(t,1,test,X, test);
+        add_poly(t-1,1,test,X, test);
     }
     return goppa;
 }
@@ -47,7 +47,7 @@ void keygen(const int m, const int t, int Q[t][(1 << m)-m*t], int goppa[t+1], in
     // create parity check matrix H = HG * Hhat
     int Hhat[t][1 << m];
     for (int i = 0; i < t; i++) {
-        for (int j = 0; j <= (1 << m); j++) {
+        for (int j = 0; j < (1 << m); j++) {
             Hhat[i][j] = galois_single_divide(galois_pow(private_perm[j],i,m), galois_eval_poly(private_perm[j],t,goppa, m),m);
         }
     }
