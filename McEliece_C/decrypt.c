@@ -164,6 +164,10 @@ int main(int argc, char *argv[]) {
         perror("The encrypted file is in the wrong format");
         return 4;
     }
+    // also if the padding variable is too large, the file is in the wrong format
+    // could throw an error but where's the fun in that?
+    padding = padding % ((1<<m)-m*t);
+
     for (int i = 0; i < (file_size-2)/(1 << (m-3)); i++) {
         decrypt(m, t, ptr_buf, goppa, private_perm, &ptr_text, &shift);
         ptr_buf = ptr_buf + (1 << (m-3));
