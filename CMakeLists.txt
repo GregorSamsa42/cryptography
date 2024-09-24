@@ -32,3 +32,4 @@ target_link_libraries(keygen libsodium.a -lm)
 target_link_libraries(encrypt libsodium.a -lm)
 target_link_libraries(decrypt libsodium.a -lm)
 
+add_executable(error_generator error_generator.c)

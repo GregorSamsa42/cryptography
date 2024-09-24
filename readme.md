@@ -25,7 +25,6 @@ password: pw1234
 Zum debuggen: clang-15 -fsanitize=address,undefined -g ../galois/galois.c  mceliece_supp.c keygen.c /usr/lib/x86_64-linux-gnu/libsodium.a
 ./a.out
 
-
 Die version mit Trigger cross-compilet wie folgt:
 
 aarch64-linux-gnu-gcc -static ../McEliece_C/decrypt.c ../McEliece_C/mceliece_supp.c ../galois/galois.c ../lib/libgpiod-2.1.3/lib/chip.c ../lib/libgpiod-2.1.3/lib/line-config.c ../lib/libgpiod-2.1.3/lib/line-settings.c ../lib/libgpiod-2.1.3/lib/request-config.c ../lib/libgpiod-2.1.3/lib/internal.c ../lib/libgpiod-2.1.3/lib/chip-info.c ../lib/libgpiod-2.1.3/lib/line-info.c ../lib/libgpiod-2.1.3/lib/line-request.c ../lib/libgpiod-2.1.3/lib/info-event.c ../lib/libgpiod-2.1.3/lib/edge-event.c -I../lib/libgpiod-2.1.3/include -L../lib -lsodium -o decrypt

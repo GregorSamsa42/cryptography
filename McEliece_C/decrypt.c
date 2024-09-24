@@ -190,7 +190,7 @@ void decrypt(const int m, const int t, unsigned char* codeword, int goppa[t+1], 
     // for (int i = 0; i <= t; i++) {
     //     printf("%d ",sigma[i]);
     // }
-    unsigned char error[1 << (m-3)];
+    unsigned char* error = malloc(sizeof(char) * (1 << (m-3)));
     error_from_errorlocator(m,t,sigma,error, private_perm);
     // remove error from the codeword and move pointers appropriately
     for (int i = 0; i < (1 << m)-m*t; i++) {
@@ -201,6 +201,7 @@ void decrypt(const int m, const int t, unsigned char* codeword, int goppa[t+1], 
         }
     }
     *shift = ((*shift + ((1 << m) - m*t)) % 8);
+    free(error);
 }
 #define m 11
 #define t 47 // pick prime
@@ -229,8 +230,6 @@ int main(int argc, char *argv[]) {
     }
 
     // value = toggle_line_value(value);
-    gpiod_line_request_set_value(request, line_offset, value);
-    printf("%d=%s\n", line_offset, value_str(value));
     // gpiod_line_request_release(request);
 
 
@@ -284,10 +283,26 @@ int main(int argc, char *argv[]) {
     // could throw an error but where's the fun in that?
     padding = padding % ((1<<m)-m*t);
 
+    gpiod_line_request_set_value(request, line_offset, value);
+    printf("%d=%s\n", line_offset, value_str(value));
+    FILE* fp = fopen("log.txt", "w");
+    int towrite = 1;
+    fwrite(&towrite, sizeof(int), 1, fp);
+
     for (int i = 0; i < (file_size-2)/(1 << (m-3)); i++) {
         decrypt(m, t, ptr_buf, goppa, private_perm, &ptr_text, &shift);
         ptr_buf = ptr_buf + (1 << (m-3));
     }
+
+    fp = fopen("log.txt", "a");
+    towrite = 2;
+    fwrite(&towrite, sizeof(int), 1, fp);
+    // TOGGLE GPIO OFF
+
+    value = toggle_line_value(value);
+    gpiod_line_request_set_value(request, line_offset, value);
+    printf("%d=%s\n", line_offset, value_str(value));
+    gpiod_line_request_release(request);
     // write to file, making sure to disregard the padding
     FILE* fp_decrypted;
     if (argc == 4) {
@@ -302,12 +317,6 @@ int main(int argc, char *argv[]) {
     free(goppa);
     free(private_perm);
     free(cleartext);
-    // TOGGLE GPIO OFF
-
-    value = toggle_line_value(value);
-    gpiod_line_request_set_value(request, line_offset, value);
-    printf("%d=%s\n", line_offset, value_str(value));
-    gpiod_line_request_release(request);
 
     return 0;
 }
