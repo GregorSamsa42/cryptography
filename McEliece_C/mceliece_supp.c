@@ -3,6 +3,7 @@
 #include "sodium.h"
 
 
+
 void XOR_bits_in_place(unsigned char* a, const int b, const int bit_a, const int bit_b) {
     // XORs the bit_a-th bit of a with the bit_b-th bit of b
     if (bit_a >= bit_b) {
