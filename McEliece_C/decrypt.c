@@ -179,42 +179,8 @@ void error_from_errorlocator(const int m, const int t, int sigma[t], unsigned ch
     // }
 }
 
-void decrypt(const int m, const int t, unsigned char* codeword, int goppa[t+1], int private_perm[1 << m], unsigned char** cleartext, int* shift) {
-    int sigma[t+1];
-    errorlocator(m, t, codeword, goppa, private_perm, sigma);
-    // printf("\n Codeword:");
-    // for (int i = 0; i < (1 << (m-3)); i++) {
-    //     printf("%d ",codeword[i]);
-    // }
-    // printf("\n Error locator poly:");
-    // for (int i = 0; i <= t; i++) {
-    //     printf("%d ",sigma[i]);
-    // }
-    unsigned char* error = malloc(sizeof(char) * (1 << (m-3)));
-    error_from_errorlocator(m,t,sigma,error, private_perm);
-    // remove error from the codeword and move pointers appropriately
-    for (int i = 0; i < (1 << m)-m*t; i++) {
-        // append the last 2^m-mt bits of the output of the decrypted codeword to cleartext
-        XOR_bits_in_place(*cleartext, codeword[(m*t+i)/8]^error[(m*t+i)/8], (i+*shift)%8, (m*t+i) % 8);
-        if ((i+*shift) % 8 == 7) {
-            (*cleartext)++;
-        }
-    }
-    *shift = ((*shift + ((1 << m) - m*t)) % 8);
-    free(error);
-}
-#define m 11
-#define t 47 // pick prime
 
-int main(int argc, char *argv[]) {
-    // argv[1] is file to be decrypted, argv[2] the private key, and argv[3] the output if given
-    if (argc != 3 && argc != 4) {
-        printf("There should be two or three arguments.\n");
-        return 1;
-    }
-
-    // TOGGLE GPIO
-
+void gpio_on() {
     static const char *const chip_path = "/dev/gpiochip0";
     static const unsigned int line_offset = 11;
 
@@ -226,8 +192,76 @@ int main(int argc, char *argv[]) {
     if (!request) {
         fprintf(stderr, "failed to request line: %s\n",
             strerror(errno));
-        return EXIT_FAILURE;
     }
+    // value = toggle_line_value(value);
+    gpiod_line_request_set_value(request, line_offset, value);
+    printf("%d=%s\n", line_offset, value_str(value));
+    gpiod_line_request_release(request);
+}
+
+void gpio_off() {
+    static const char *const chip_path = "/dev/gpiochip0";
+    static const unsigned int line_offset = 11;
+
+    enum gpiod_line_value value = GPIOD_LINE_VALUE_ACTIVE;
+    struct gpiod_line_request *request;
+
+    request = request_output_line(chip_path, line_offset, value,
+                      "toggle-line-value");
+    if (!request) {
+        fprintf(stderr, "failed to request line: %s\n",
+            strerror(errno));
+    }
+    value = toggle_line_value(value);
+    gpiod_line_request_set_value(request, line_offset, value);
+    printf("%d=%s\n", line_offset, value_str(value));
+    gpiod_line_request_release(request);
+}
+
+void decrypt(const int m, const int t, unsigned char* codeword, int goppa[t+1], int private_perm[1 << m], unsigned char** cleartext, int* shift) {
+    int sigma[t+1];
+    gpio_on();
+    errorlocator(m, t, codeword, goppa, private_perm, sigma);
+    gpio_off();
+    // printf("\n Codeword:");
+    // for (int i = 0; i < (1 << (m-3)); i++) {
+    //     printf("%d ",codeword[i]);
+    // }
+    // printf("\n Error locator poly:");
+    // for (int i = 0; i <= t; i++) {
+    //     printf("%d ",sigma[i]);
+    // }
+    unsigned char* error = malloc(sizeof(char) * (1 << (m-3)));
+    gpio_on();
+    error_from_errorlocator(m,t,sigma,error, private_perm);
+    gpio_off();
+    // remove error from the codeword and move pointers appropriately
+    gpio_on();
+    for (int i = 0; i < (1 << m)-m*t; i++) {
+        // append the last 2^m-mt bits of the output of the decrypted codeword to cleartext
+        XOR_bits_in_place(*cleartext, codeword[(m*t+i)/8]^error[(m*t+i)/8], (i+*shift)%8, (m*t+i) % 8);
+        if ((i+*shift) % 8 == 7) {
+            (*cleartext)++;
+        }
+    }
+    gpio_off();
+    *shift = ((*shift + ((1 << m) - m*t)) % 8);
+    free(error);
+}
+#define m 11
+#define t 47 // pick prime
+
+
+int main(int argc, char *argv[]) {
+    // argv[1] is file to be decrypted, argv[2] the private key, and argv[3] the output if given
+    if (argc != 3 && argc != 4) {
+        printf("There should be two or three arguments.\n");
+        return 1;
+    }
+
+    // TOGGLE GPIO
+
+
 
     // value = toggle_line_value(value);
     // gpiod_line_request_release(request);
@@ -283,26 +317,12 @@ int main(int argc, char *argv[]) {
     // could throw an error but where's the fun in that?
     padding = padding % ((1<<m)-m*t);
 
-    gpiod_line_request_set_value(request, line_offset, value);
-    printf("%d=%s\n", line_offset, value_str(value));
-    FILE* fp = fopen("log.txt", "w");
-    int towrite = 1;
-    fwrite(&towrite, sizeof(int), 1, fp);
-
     for (int i = 0; i < (file_size-2)/(1 << (m-3)); i++) {
         decrypt(m, t, ptr_buf, goppa, private_perm, &ptr_text, &shift);
         ptr_buf = ptr_buf + (1 << (m-3));
     }
-
-    fp = fopen("log.txt", "a");
-    towrite = 2;
-    fwrite(&towrite, sizeof(int), 1, fp);
     // TOGGLE GPIO OFF
 
-    value = toggle_line_value(value);
-    gpiod_line_request_set_value(request, line_offset, value);
-    printf("%d=%s\n", line_offset, value_str(value));
-    gpiod_line_request_release(request);
     // write to file, making sure to disregard the padding
     FILE* fp_decrypted;
     if (argc == 4) {
