@@ -2,9 +2,11 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/types.h>
-//
-// Created by linux on 24.09.24.
-//
+// This file prepares a timed attack on the Mceliece cryptosystem running on a SOM. It takes in a ciphertext
+// and generates many error files which can be sent as input, and by measuring their execution time we can deduce the
+// cleartext.
+// Idea in paper "Side Channels in the McEliece PKC" by Falko Strenzke, Erik Tews, H. Gregor Molter, Raphael Overbeck,
+// Abdulhadi Shoufan
 
 void XOR_bits_in_place(unsigned char* a, const int b, const int bit_a, const int bit_b) {
     // XORs the bit_a-th bit of a with the bit_b-th bit of b
